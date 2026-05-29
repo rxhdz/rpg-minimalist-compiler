@@ -1,0 +1,99 @@
+// TurnGame DSL — Gramática para Lark (LALR)
+
+// ----- Terminales (palabras reservadas) -----
+PERSONAJE: "personaje"
+HP: "hp"
+ATK: "atk"
+DEF: "def"
+TURNO: "turno"
+USAR: "usar"
+ATAQUE: "ataque"
+EN: "en"
+REPEAT: "repeat"
+VECES: "veces"
+SI: "si"
+ENTONCES: "entonces"
+SINO: "sino"
+FIN: "fin"
+MIENTRAS: "mientras"
+HACER: "hacer"
+NUMERO: "numero"
+IMPRIMIR: "imprimir"
+
+// ----- Literales -----
+NUMBER: /\d+(\.\d+)?/
+STRING: /"[^"\\]*(?:\\.[^"\\]*)*"/
+
+// ----- Identificador (después de keywords para que coincidan primero) -----
+IDENTIFIER: /[a-zA-Z_][a-zA-Z0-9_]*/
+
+// ----- Operadores -----
+PLUS: "+"
+MINUS: "-"
+TIMES: "*"
+DIVIDE: "/"
+ASSIGN: "="
+EQ: "=="
+NEQ: "!="
+LT: "<"
+GT: ">"
+LTE: "<="
+GTE: ">="
+DOT: "."
+
+// ----- Delimitadores -----
+LPAREN: "("
+RPAREN: ")"
+LBRACE: "{"
+RBRACE: "}"
+SEMICOLON: ";"
+
+// ----- Comentarios -----
+COMMENT_LINE: /\/\/[^\n]*/
+COMMENT_BLOCK: /\/\*[\s\S]*?\*\//
+
+// ----- Espacios en blanco -----
+%import common.WS
+%ignore WS
+%ignore COMMENT_LINE
+%ignore COMMENT_BLOCK
+
+// ----- Reglas gramaticales -----
+
+?start: program
+program: statement*
+
+statement: personaje_decl
+         | turno_stmt
+         | repeat_stmt
+         | si_stmt
+         | mientras_stmt
+         | var_decl
+         | assignment
+         | print_stmt
+
+personaje_decl: PERSONAJE IDENTIFIER HP ASSIGN NUMBER ATK ASSIGN NUMBER DEF ASSIGN NUMBER SEMICOLON
+turno_stmt: TURNO IDENTIFIER USAR ATAQUE EN IDENTIFIER SEMICOLON
+repeat_stmt: REPEAT NUMBER VECES LBRACE statement* RBRACE
+si_stmt: SI condition ENTONCES LBRACE statement* RBRACE (SINO LBRACE statement* RBRACE)? FIN
+mientras_stmt: MIENTRAS condition HACER LBRACE statement* RBRACE FIN
+var_decl: NUMERO IDENTIFIER (ASSIGN expression)? SEMICOLON
+assignment: lvalue ASSIGN expression SEMICOLON
+lvalue: IDENTIFIER | attr_access
+print_stmt: IMPRIMIR expression SEMICOLON
+
+condition: expression relop expression
+
+?expression: addition
+addition: multiplication (PLUS multiplication | MINUS multiplication)*
+multiplication: unary (TIMES unary | DIVIDE unary)*
+?unary: (PLUS | MINUS)? primary
+?primary: NUMBER
+        | STRING
+        | IDENTIFIER
+        | attr_access
+        | LPAREN expression RPAREN
+
+attr_access: IDENTIFIER DOT (HP | ATK | DEF)
+
+relop: LT | GT | LTE | GTE | EQ | NEQ
