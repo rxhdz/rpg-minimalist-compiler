@@ -87,8 +87,8 @@ condition: expression relop expression
 ?expression: addition
 addition: multiplication (PLUS multiplication | MINUS multiplication)*
 multiplication: unary (TIMES unary | DIVIDE unary)*
-?unary: (PLUS | MINUS)? primary
-?primary: NUMBER
+unary: (PLUS | MINUS)? primary
+primary: NUMBER
         | STRING
         | IDENTIFIER
         | attr_access
