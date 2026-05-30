@@ -195,9 +195,9 @@ class AnalizadorSemantico:
                 f"'atk' de '{nodo.nombre}' es negativo ({nodo.atk}). Debe ser >= 0.",
                 nodo.linea, nodo.columna,
             )
-        if nodo.def_val < 0:
+        if nodo.defensa < 0:
             self._error(
-                f"'def' de '{nodo.nombre}' es negativo ({nodo.def_val}). Debe ser >= 0.",
+                f"'def' de '{nodo.nombre}' es negativo ({nodo.defensa}). Debe ser >= 0.",
                 nodo.linea, nodo.columna,
             )
 
@@ -206,7 +206,7 @@ class AnalizadorSemantico:
         )
         entrada.hp = {"valor": nodo.hp, "dir": None}
         entrada.atk = {"valor": nodo.atk, "dir": None}
-        entrada.def_val = {"valor": nodo.def_val, "dir": None}
+        entrada.defensa = {"valor": nodo.defensa, "dir": None}
         entrada.hp_estatico = nodo.hp
         entrada.inicializado = True
 
@@ -268,9 +268,9 @@ class AnalizadorSemantico:
             and victima and victima.tipo == "personaje"
         ):
             atk_a = atacante.atk["valor"]
-            def_v = victima.def_val["valor"]
-            dano = max(0, atk_a - def_v)
-            nuevo_hp = max(0, victima.hp_estatico - dano)
+            def_v = victima.defensa["valor"]
+            danno = max(0, atk_a - def_v)
+            nuevo_hp = max(0, victima.hp_estatico - danno)
             self.tabla.actualizar_hp_estatico(nodo.victima, nuevo_hp)
 
     # ------------------------------------------------------------------
@@ -279,18 +279,18 @@ class AnalizadorSemantico:
 
     def _visitar_repeat(self, nodo: Repeat):
         # Verificar condicion (no hay, solo el cuerpo)
-        self.tabla.push_ambito()
+        self.tabla.abrir_ambito()
         for _ in range(nodo.veces):
             for stmt in nodo.cuerpo:
                 self._visitar(stmt)
-        self.tabla.pop_ambito()
+        self.tabla.cerrar_ambito()
 
     # ------------------------------------------------------------------
     # Si/Sino: analizar cada rama una vez (D3)
     # ------------------------------------------------------------------
 
     def _visitar_si(self, nodo: Si):
-        # Verificar que la condicion sea booleana
+        self._visitar(nodo.condicion)
         tipo_cond = self._obtener_tipo(nodo.condicion)
         if tipo_cond and tipo_cond != "booleano":
             self._error(
@@ -299,22 +299,23 @@ class AnalizadorSemantico:
                 nodo.condicion.linea, nodo.condicion.columna,
             )
 
-        self.tabla.push_ambito()
+        self.tabla.abrir_ambito()
         for stmt in nodo.entonces:
             self._visitar(stmt)
-        self.tabla.pop_ambito()
+        self.tabla.cerrar_ambito()
 
         if nodo.sino:
-            self.tabla.push_ambito()
+            self.tabla.abrir_ambito()
             for stmt in nodo.sino:
                 self._visitar(stmt)
-            self.tabla.pop_ambito()
+            self.tabla.cerrar_ambito()
 
     # ------------------------------------------------------------------
     # Mientras: analizar una iteracion del cuerpo (D3)
     # ------------------------------------------------------------------
 
     def _visitar_mientras(self, nodo: Mientras):
+        self._visitar(nodo.condicion)
         tipo_cond = self._obtener_tipo(nodo.condicion)
         if tipo_cond and tipo_cond != "booleano":
             self._error(
@@ -323,10 +324,10 @@ class AnalizadorSemantico:
                 nodo.condicion.linea, nodo.condicion.columna,
             )
 
-        self.tabla.push_ambito()
+        self.tabla.abrir_ambito()
         for stmt in nodo.cuerpo:
             self._visitar(stmt)
-        self.tabla.pop_ambito()
+        self.tabla.cerrar_ambito()
 
     # ------------------------------------------------------------------
     # G2 + D4: Declaracion de variable numero

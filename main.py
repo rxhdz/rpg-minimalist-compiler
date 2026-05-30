@@ -7,9 +7,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lark
 from src.parser import analizar_archivo, analizar_linea, obtener_parser
 from src.ast_nodes import mostrar_ast
+from src.semantic_analyzer import analizar_semantica
 
 # Mapa de nombres de tokens de Lark a representacion legible
-_TOKEN_LEGIBLE = {
+_TOKENS_LEGIBLES = {
     "SEMICOLON": "';'",
     "PLUS": "'+'",
     "MINUS": "'-'",
@@ -51,8 +52,8 @@ _TOKEN_LEGIBLE = {
 }
 
 
-def _token_a_legible(token: str) -> str:
-    return _TOKEN_LEGIBLE.get(token, f"'{token.lower()}'")
+def _traducir_token(token: str) -> str:
+    return _TOKENS_LEGIBLES.get(token, f"'{token.lower()}'")
 
 
 def formatear_error(error: Exception) -> str:
@@ -62,7 +63,7 @@ def formatear_error(error: Exception) -> str:
             f"caracter inesperado '{error.char}'"
         )
     if isinstance(error, lark.UnexpectedToken):
-        esperado = ", ".join(_token_a_legible(t) for t in error.expected)
+        esperado = ", ".join(_traducir_token(t) for t in error.expected)
         return (
             f"Error sintactico [linea {error.line}, columna {error.column}]: "
             f"se esperaba {esperado}, se encontro '{error.token.value}'"
@@ -72,12 +73,9 @@ def formatear_error(error: Exception) -> str:
     return f"Error: {error}"
 
 
-def ejecutar_archivo(ruta: str):
+def ejecutar_archivo(ruta: str, mostrar_arbol: bool = True):
     try:
         programa = analizar_archivo(ruta)
-        print("--- Analisis sintactico exitoso ---")
-        print()
-        print(mostrar_ast(programa))
     except lark.LarkError as e:
         print(formatear_error(e))
         sys.exit(1)
@@ -89,9 +87,24 @@ def ejecutar_archivo(ruta: str):
         traceback.print_exc()
         sys.exit(1)
 
+    # Analisis semantico
+    errores = analizar_semantica(programa)
+    if errores:
+        print(f"Se encontraron {len(errores)} error(es) semantico(s):")
+        print()
+        for e in errores:
+            print(f"  {e}")
+        sys.exit(1)
+
+    print("--- Analisis completado: programa valido ---")
+    if mostrar_arbol:
+        print()
+        print(mostrar_ast(programa))
+
 
 def ejecutar_repl():
     print("=== TurnGame REPL ===")
+    print("Solo analisis sintactico (sin validacion semantica)")
     print("Escribe 'salir' para terminar")
     print()
     while True:
@@ -117,9 +130,16 @@ def ejecutar_repl():
 
 
 def main():
-    if len(sys.argv) > 1:
-        ruta = sys.argv[1]
-        ejecutar_archivo(ruta)
+    mostrar_arbol = True
+    args = [a for a in sys.argv[1:] if a]
+
+    if "--no-ast" in args:
+        mostrar_arbol = False
+        args.remove("--no-ast")
+
+    if args:
+        ruta = args[0]
+        ejecutar_archivo(ruta, mostrar_arbol=mostrar_arbol)
     else:
         ejecutar_repl()
 

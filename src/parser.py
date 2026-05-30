@@ -51,8 +51,8 @@ class TransformadorAST(lark.Transformer):
         nombre = str(hijos[1])
         hp = int(hijos[4])
         atk = int(hijos[7])
-        def_val = int(hijos[10])
-        return DeclPersonaje(nombre, hp, atk, def_val, meta.line, meta.column)
+        defensa = int(hijos[10])
+        return DeclPersonaje(nombre, hp, atk, defensa, meta.line, meta.column)
 
     # -- Turno de combate ---------------------------------------------------
     # turno_stmt: TURNO IDENTIFIER USAR ATAQUE EN IDENTIFIER SEMICOLON

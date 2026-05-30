@@ -25,15 +25,15 @@ class DeclPersonaje(NodoAST):
     nombre: str
     hp: int
     atk: int
-    def_val: int
+    defensa: int
 
-    def __init__(self, nombre: str, hp: int, atk: int, def_val: int,
+    def __init__(self, nombre: str, hp: int, atk: int, defensa: int,
                  linea: int = 0, columna: int = 0):
         super().__init__(linea, columna)
         self.nombre = nombre
         self.hp = hp
         self.atk = atk
-        self.def_val = def_val
+        self.defensa = defensa
 
 
 @dataclass
@@ -196,7 +196,7 @@ def mostrar_ast(nodo: NodoAST, sangria: str = "") -> str:
     elif isinstance(nodo, DeclPersonaje):
         partes.append(
             f"{prefijo}DeclPersonaje(nombre={nodo.nombre}, "
-            f"hp={nodo.hp}, atk={nodo.atk}, def={nodo.def_val})"
+            f"hp={nodo.hp}, atk={nodo.atk}, def={nodo.defensa})"
         )
     elif isinstance(nodo, Turno):
         partes.append(

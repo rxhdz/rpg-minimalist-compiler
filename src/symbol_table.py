@@ -22,7 +22,7 @@ class EntradaSimbolo:
     # Para personaje -- cada atributo tiene { "valor": int, "dir": int }
     hp: dict | None = None
     atk: dict | None = None
-    def_val: dict | None = None
+    defensa: dict | None = None
     hp_estatico: int | None = None   # HP rastreado estaticamente (regla D3)
 
     # Para numero
@@ -33,7 +33,7 @@ class EntradaSimbolo:
         if self.tipo == "personaje":
             hp_v = self.hp["valor"] if self.hp else "?"
             atk_v = self.atk["valor"] if self.atk else "?"
-            def_v = self.def_val["valor"] if self.def_val else "?"
+            def_v = self.defensa["valor"] if self.defensa else "?"
             return (
                 f"EntradaSimbolo({self.nombre!r}, tipo=personaje, "
                 f"hp={hp_v}, atk={atk_v}, def={def_v}, "
@@ -55,10 +55,10 @@ class TablaSimbolos:
 
     # -- Gestion de ambitos ------------------------------------------------
 
-    def push_ambito(self):
+    def abrir_ambito(self):
         self.ambitos.append({})
 
-    def pop_ambito(self):
+    def cerrar_ambito(self):
         self.ambitos.pop()
 
     # -- Declaracion -------------------------------------------------------
@@ -82,7 +82,7 @@ class TablaSimbolos:
             self.contador_dir += 1
             entrada.atk["dir"] = self.contador_dir
             self.contador_dir += 1
-            entrada.def_val["dir"] = self.contador_dir
+            entrada.defensa["dir"] = self.contador_dir
             self.contador_dir += 1
 
         self.ambitos[-1][nombre] = entrada
