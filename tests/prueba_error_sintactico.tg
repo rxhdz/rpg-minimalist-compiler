@@ -1,0 +1,2 @@
+personaje hero hp=100 atk=25 def=10
+turno hero usar ataque en goblin;

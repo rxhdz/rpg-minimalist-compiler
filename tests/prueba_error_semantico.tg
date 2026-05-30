@@ -1,0 +1,6 @@
+personaje hero hp=10 atk=50 def=0;
+personaje goblin hp=20 atk=5 def=0;
+numero x = -3;
+
+turno hero usar ataque en goblin;
+turno hero usar ataque en goblin;

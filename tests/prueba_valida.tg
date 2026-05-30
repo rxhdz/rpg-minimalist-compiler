@@ -1,0 +1,28 @@
+personaje hero hp=100 atk=25 def=10;
+personaje goblin hp=40 atk=8 def=2;
+personaje boss hp=200 atk=15 def=5;
+
+turno hero usar ataque en goblin;
+turno goblin usar ataque en hero;
+
+numero danio_extra = 10;
+hero.atk = hero.atk + danio_extra;
+
+si goblin.hp > 0 entonces {
+    turno hero usar ataque en goblin;
+} sino {
+    turno goblin usar ataque en hero;
+} fin
+
+repeat 2 veces {
+    turno hero usar ataque en boss;
+}
+
+mientras hero.hp > 0 hacer {
+    numero ronda = 1;
+    turno goblin usar ataque en hero;
+    ronda = ronda + 1;
+} fin
+
+imprimir "Combate finalizado";
+imprimir hero.hp;
