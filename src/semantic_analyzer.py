@@ -255,14 +255,14 @@ class AnalizadorSemantico:
             clave = (nodo.linea, nodo.columna)
             if clave not in self._muertos_reportados:
                 self._error(
-                    f"no se puede atacar a '{nodo.victima}': ya esta derrotado "
-                    f"(HP = {hp_v}).",
+                    f"no se puede atacar a '{nodo.victima}': "
+                    f"ya esta derrotado.",
                     nodo.linea, nodo.columna,
                 )
                 self._muertos_reportados.add(clave)
             return  # No actualizar HP si ya estaba muerto
 
-        # Calcular dano y actualizar HP estatico
+        # Calcular dano y actualizar HP estatico (nunca baja de 0)
         if (
             atacante and atacante.tipo == "personaje"
             and victima and victima.tipo == "personaje"
@@ -270,7 +270,7 @@ class AnalizadorSemantico:
             atk_a = atacante.atk["valor"]
             def_v = victima.def_val["valor"]
             dano = max(0, atk_a - def_v)
-            nuevo_hp = victima.hp_estatico - dano
+            nuevo_hp = max(0, victima.hp_estatico - dano)
             self.tabla.actualizar_hp_estatico(nodo.victima, nuevo_hp)
 
     # ------------------------------------------------------------------
