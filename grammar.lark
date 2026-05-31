@@ -72,7 +72,8 @@ statement: personaje_decl
          | assignment
          | print_stmt
 
-personaje_decl: PERSONAJE IDENTIFIER HP ASSIGN NUMBER ATK ASSIGN NUMBER DEF ASSIGN NUMBER SEMICOLON
+stat_val: MINUS? NUMBER
+personaje_decl: PERSONAJE IDENTIFIER HP ASSIGN stat_val ATK ASSIGN stat_val DEF ASSIGN stat_val SEMICOLON
 turno_stmt: TURNO IDENTIFIER USAR ATAQUE EN IDENTIFIER SEMICOLON
 repeat_stmt: REPEAT NUMBER VECES LBRACE statement* RBRACE
 si_stmt: SI condition ENTONCES LBRACE statement* RBRACE (SINO LBRACE statement* RBRACE)? FIN

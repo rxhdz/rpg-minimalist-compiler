@@ -44,7 +44,18 @@ class TransformadorAST(lark.Transformer):
         return hijos[0]
 
     # -- Declaracion de personaje -------------------------------------------
-    # personaje_decl: PERSONAJE IDENTIFIER HP ASSIGN NUMBER ATK ASSIGN NUMBER DEF ASSIGN NUMBER SEMICOLON
+    # stat_val: MINUS? NUMBER
+    # personaje_decl: PERSONAJE IDENTIFIER HP ASSIGN stat_val ATK ASSIGN stat_val DEF ASSIGN stat_val SEMICOLON
+
+    def stat_val(self, hijos):
+        try:
+            if len(hijos) == 1:
+                return int(hijos[0])
+            return -int(hijos[1])
+        except ValueError:
+            raise lark.GrammarError(
+                f"El valor '{hijos[-1]}' debe ser un número entero, no decimal."
+            )
 
     @v_args(meta=True)
     def personaje_decl(self, hijos, meta):
@@ -217,11 +228,12 @@ class TransformadorAST(lark.Transformer):
 
     # -- Acceso a atributo --------------------------------------------------
     # attr_access: IDENTIFIER DOT (HP | ATK | DEF)
+    # indices:       0          1    2
 
     @v_args(meta=True)
     def attr_access(self, hijos, meta):
-        objeto = str(hijos[0])
-        atributo = str(hijos[2])
+        objeto = str(hijos[0])   # nombre del personaje
+        atributo = str(hijos[2]) # "hp", "atk" o "def" (hijos[1] es el punto)
         return AccesoAtributo(objeto, atributo, meta.line, meta.column)
 
 
