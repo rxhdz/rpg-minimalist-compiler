@@ -1,10 +1,10 @@
-"""Analisis semantico del DSL TurnGame.
+"""Análisis semántico del DSL TurnGame.
 
 Recorre el AST y verifica:
-  - Reglas generales: G1 (var no declarada), G2 (redeclaracion),
+  - Reglas generales: G1 (var no declarada), G2 (redeclaración),
     G3 (tipos incompatibles), G4 (uso antes de inicializar)
-  - Reglas de dominio: D1 (hp/atk/def >= 0), D2 (atacante/victima declarados),
-    D3 (no atacar a HP <= 0), D4 (numero entero >= 0)
+  - Reglas de dominio: D1 (hp/atk/def >= 0), D2 (atacante/víctima declarados),
+    D3 (no atacar a HP <= 0), D4 (número entero >= 0)
 """
 
 from .ast_nodes import (
@@ -26,9 +26,15 @@ from .ast_nodes import (
 )
 from .symbol_table import EntradaSimbolo, TablaSimbolos
 
+PALABRAS_RESERVADAS = {
+    "personaje", "hp", "atk", "def", "turno", "usar", "ataque", "en",
+    "repeat", "veces", "si", "entonces", "sino", "fin",
+    "mientras", "hacer", "numero", "imprimir",
+}
+
 
 class AnalizadorSemantico:
-    """Analiza sematicamente un AST del DSL TurnGame."""
+    """Analiza semánticamente un AST del DSL TurnGame."""
 
     def __init__(self):
         self.tabla = TablaSimbolos()
@@ -50,7 +56,7 @@ class AnalizadorSemantico:
 
     def _error(self, mensaje: str, linea: int, columna: int):
         self.errores.append(
-            f"Error semantico [linea {linea}, columna {columna}]: {mensaje}"
+            f"Error semántico [línea {linea}, columna {columna}]: {mensaje}"
         )
 
     def _obtener_tipo(self, nodo: NodoAST) -> str | None:
@@ -71,7 +77,7 @@ class AnalizadorSemantico:
         return None
 
     def _evaluar_expresion(self, nodo: NodoAST) -> tuple:
-        """Intenta evaluar una expresion a un valor numerico estatico.
+        """Intenta evaluar una expresion a un valor numérico estático.
 
         Retorna (valor, tipo) donde valor es int/float/None si no es reducible.
         """
@@ -184,6 +190,15 @@ class AnalizadorSemantico:
     # ------------------------------------------------------------------
 
     def _visitar_decl_personaje(self, nodo: DeclPersonaje):
+        # M1: palabras reservadas como nombre
+        if nodo.nombre in PALABRAS_RESERVADAS:
+            self._error(
+                f"'{nodo.nombre}' es una palabra reservada y no puede "
+                f"usarse como nombre de personaje.",
+                nodo.linea, nodo.columna,
+            )
+            return
+
         # D1: hp, atk, def no negativos
         if nodo.hp < 0:
             self._error(
@@ -249,41 +264,53 @@ class AnalizadorSemantico:
             )
             return
 
-        # D3: verificar HP estatico de la victima
+        # D3: verificar HP estático del atacante
+        hp_a = atacante.hp_estatico
+        if hp_a is not None and hp_a <= 0:
+            clave = (nodo.linea, nodo.columna)
+            if clave not in self._muertos_reportados:
+                self._error(
+                    f"no se puede atacar con '{nodo.atacante}': "
+                    f"ya está derrotado (HP = {int(hp_a)}).",
+                    nodo.linea, nodo.columna,
+                )
+                self._muertos_reportados.add(clave)
+            return
+
+        # D3: verificar HP estático de la víctima
         hp_v = victima.hp_estatico
         if hp_v is not None and hp_v <= 0:
             clave = (nodo.linea, nodo.columna)
             if clave not in self._muertos_reportados:
                 self._error(
                     f"no se puede atacar a '{nodo.victima}': "
-                    f"ya esta derrotado.",
+                    f"ya está derrotado (HP = {int(hp_v)}).",
                     nodo.linea, nodo.columna,
                 )
                 self._muertos_reportados.add(clave)
             return  # No actualizar HP si ya estaba muerto
 
-        # Calcular dano y actualizar HP estatico (nunca baja de 0)
+        # Calcular daño y actualizar HP estático (puede ser negativo)
         if (
             atacante and atacante.tipo == "personaje"
             and victima and victima.tipo == "personaje"
         ):
             atk_a = atacante.atk["valor"]
             def_v = victima.defensa["valor"]
-            danno = max(0, atk_a - def_v)
-            nuevo_hp = max(0, victima.hp_estatico - danno)
-            self.tabla.actualizar_hp_estatico(nodo.victima, nuevo_hp)
+            danio = max(0, atk_a - def_v)
+            hp_real = victima.hp_estatico - danio
+            self.tabla.actualizar_hp_estatico(nodo.victima, hp_real)
 
     # ------------------------------------------------------------------
     # Repeat: simular N iteraciones (D3)
     # ------------------------------------------------------------------
 
     def _visitar_repeat(self, nodo: Repeat):
-        # Verificar condicion (no hay, solo el cuerpo)
-        self.tabla.abrir_ambito()
         for _ in range(nodo.veces):
+            self.tabla.abrir_ambito()
             for stmt in nodo.cuerpo:
                 self._visitar(stmt)
-        self.tabla.cerrar_ambito()
+            self.tabla.cerrar_ambito()
 
     # ------------------------------------------------------------------
     # Si/Sino: analizar cada rama una vez (D3)
@@ -334,6 +361,15 @@ class AnalizadorSemantico:
     # ------------------------------------------------------------------
 
     def _visitar_decl_var(self, nodo: DeclVar):
+        # M1: palabras reservadas como nombre
+        if nodo.nombre in PALABRAS_RESERVADAS:
+            self._error(
+                f"'{nodo.nombre}' es una palabra reservada y no puede "
+                f"usarse como nombre de variable.",
+                nodo.linea, nodo.columna,
+            )
+            return
+
         valor_inicial = None
 
         if nodo.inicializador:
@@ -445,7 +481,7 @@ class AnalizadorSemantico:
             # D4: validar que el valor sea numero no negativo
             if tipo_val and tipo_val != "numero":
                 self._error(
-                    f"El atributo '{nodo.objetivo.atributo}' es numerico, "
+                    f"El atributo '{nodo.objetivo.atributo}' es numérico, "
                     f"no se puede asignar un valor de tipo '{tipo_val}'.",
                     nodo.linea, nodo.columna,
                 )
@@ -458,6 +494,19 @@ class AnalizadorSemantico:
                     f"(valor: {val}).",
                     nodo.linea, nodo.columna,
                 )
+
+            # A3: actualizar la tabla de símbolos si el valor es evaluable
+            if val is not None:
+                attr = nodo.objetivo.atributo
+                entrada = self.tabla.resolver(nodo.objetivo.objeto)
+                if entrada and entrada.tipo == "personaje":
+                    if attr == "hp":
+                        entrada.hp["valor"] = val
+                        entrada.hp_estatico = val
+                    elif attr == "atk":
+                        entrada.atk["valor"] = val
+                    elif attr == "def":
+                        entrada.defensa["valor"] = val
 
     # ------------------------------------------------------------------
     # G4: Imprimir
@@ -481,14 +530,14 @@ class AnalizadorSemantico:
         if nodo.operador in ("+", "-", "*", "/"):
             if tipo_izq and tipo_izq != "numero":
                 self._error(
-                    f" Operando izquierdo de '{nodo.operador}' debe ser "
-                    f"numerico, no de tipo '{tipo_izq}'.",
+                    f"Operando izquierdo de '{nodo.operador}' debe ser "
+                    f"numérico, no de tipo '{tipo_izq}'.",
                     nodo.izquierdo.linea, nodo.izquierdo.columna,
                 )
             if tipo_der and tipo_der != "numero":
                 self._error(
                     f"Operando derecho de '{nodo.operador}' debe ser "
-                    f"numerico, no de tipo '{tipo_der}'.",
+                    f"numérico, no de tipo '{tipo_der}'.",
                     nodo.derecho.linea, nodo.derecho.columna,
                 )
         elif nodo.operador in ("<", ">", "<=", ">=", "==", "!="):
@@ -508,7 +557,7 @@ class AnalizadorSemantico:
         tipo_op = self._obtener_tipo(nodo.operando)
         if tipo_op and tipo_op != "numero":
             self._error(
-                f"El operador '{nodo.operador}' requiere un operando numerico, "
+                f"El operador '{nodo.operador}' requiere un operando numérico, "
                 f"no de tipo '{tipo_op}'.",
                 nodo.linea, nodo.columna,
             )
