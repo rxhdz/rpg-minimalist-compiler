@@ -264,29 +264,29 @@ def obtener_parser():
     return _parser
 
 
-def parsear_archivo(ruta: str) -> lark.Tree:
+def parsear_archivo(ruta: str, on_error=None) -> lark.Tree:
     """Analiza un archivo .tg y retorna el arbol de Lark."""
     parser = obtener_parser()
     with open(ruta, "r", encoding="utf-8") as f:
         texto = f.read()
-    return parser.parse(texto)
+    return parser.parse(texto, on_error=on_error)
 
 
-def parsear_linea(texto: str) -> lark.Tree:
+def parsear_linea(texto: str, on_error=None) -> lark.Tree:
     """Analiza una linea de texto y retorna el arbol de Lark."""
     parser = obtener_parser()
-    return parser.parse(texto)
+    return parser.parse(texto, on_error=on_error)
 
 
-def analizar_archivo(ruta: str) -> Programa:
+def analizar_archivo(ruta: str, on_error=None) -> Programa:
     """Analiza un archivo .tg y retorna el AST (Programa)."""
-    arbol_lark = parsear_archivo(ruta)
+    arbol_lark = parsear_archivo(ruta, on_error=on_error)
     return TransformadorAST().transform(arbol_lark)
 
 
-def analizar_linea(texto: str) -> NodoAST:
+def analizar_linea(texto: str, on_error=None) -> NodoAST:
     """Analiza una linea de texto y retorna el nodo AST resultante."""
-    arbol_lark = parsear_linea(texto)
+    arbol_lark = parsear_linea(texto, on_error=on_error)
     return TransformadorAST().transform(arbol_lark)
 
 

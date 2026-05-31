@@ -59,32 +59,45 @@ def _traducir_token(token: str) -> str:
 def formatear_error(error: Exception) -> str:
     if isinstance(error, lark.UnexpectedCharacters):
         return (
-            f"Error lexico [linea {error.line}, columna {error.column}]: "
-            f"caracter inesperado '{error.char}'"
+            f"Error léxico [línea {error.line}, columna {error.column}]: "
+            f"carácter inesperado '{error.char}'"
         )
     if isinstance(error, lark.UnexpectedToken):
         esperado = ", ".join(_traducir_token(t) for t in error.expected)
         return (
-            f"Error sintactico [linea {error.line}, columna {error.column}]: "
-            f"se esperaba {esperado}, se encontro '{error.token.value}'"
+            f"Error sintáctico [línea {error.line}, columna {error.column}]: "
+            f"se esperaba {esperado}, se encontró '{error.token.value}'"
         )
     if isinstance(error, lark.LarkError):
-        return f"Error sintactico: {error}"
+        return f"Error sintáctico: {error}"
     return f"Error: {error}"
 
 
 def ejecutar_archivo(ruta: str, mostrar_arbol: bool = True):
+    errores_sintacticos: list[str] = []
+
+    def recovery_handler(error):
+        errores_sintacticos.append(formatear_error(error))
+        return True
+
     try:
-        programa = analizar_archivo(ruta)
+        programa = analizar_archivo(ruta, on_error=recovery_handler)
     except lark.LarkError as e:
-        print(formatear_error(e))
-        sys.exit(1)
+        if not errores_sintacticos:
+            errores_sintacticos.append(formatear_error(e))
     except FileNotFoundError:
         print(f"Error: archivo '{ruta}' no encontrado")
         sys.exit(1)
     except Exception as e:
         print(f"Error inesperado: {e}")
         traceback.print_exc()
+        sys.exit(1)
+
+    if errores_sintacticos:
+        print(f"Se encontraron {len(errores_sintacticos)} error(es) sintactico(s):")
+        print()
+        for e in errores_sintacticos:
+            print(f"  {e}")
         sys.exit(1)
 
     # Analisis semantico
