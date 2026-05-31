@@ -1,8 +1,8 @@
-"""Tabla de simbolos con soporte para ambitos anidados.
+"""Tabla de símbolos con soporte para ámbitos anidados.
 
 Estructuras:
-  - EntradaSimbolo: almacena toda la informacion de una variable declarada
-  - TablaSimbolos: pila de ambitos, declaracion y resolucion de simbolos
+  - EntradaSimbolo: almacena toda la información de una variable declarada
+  - TablaSimbolos: pila de ámbitos, declaración y resolución de símbolos
 """
 
 from dataclasses import dataclass, field
@@ -53,7 +53,7 @@ class TablaSimbolos:
         self.ambitos: list[dict[str, EntradaSimbolo]] = [{}]
         self.contador_dir: int = 0
 
-    # -- Gestion de ambitos ------------------------------------------------
+    # -- Gestión de ámbitos ------------------------------------------------
 
     def abrir_ambito(self):
         self.ambitos.append({})
@@ -103,7 +103,7 @@ class TablaSimbolos:
     def esta_declarado(self, nombre: str) -> bool:
         return self.resolver(nombre) is not None
 
-    # -- Rastreo estatico de HP (regla D3) ---------------------------------
+    # -- Rastreo estático de HP (regla D3) ---------------------------------
 
     def obtener_hp_estatico(self, nombre: str) -> int | None:
         entrada = self.resolver(nombre)
@@ -123,7 +123,7 @@ class TablaSimbolos:
         return entrada.tipo if entrada else None
 
     def mostrar(self) -> str:
-        """Retorna una representacion legible de todos los ambitos."""
+        """Retorna una representación legible de todos los ámbitos."""
         partes = []
         for i, ambito in enumerate(self.ambitos):
             partes.append(f"--- Ambito {i} ---")

@@ -1,4 +1,3 @@
-from dataclasses import dataclass, field
 from typing import Any
 
 
@@ -11,16 +10,15 @@ class NodoAST:
         self.columna = columna
 
 
-@dataclass
 class Programa(NodoAST):
-    nodos: list[NodoAST] = field(default_factory=list)
+    nodos: list[NodoAST]
 
     def __init__(self, nodos: list[NodoAST]):
         super().__init__(0, 0)
         self.nodos = nodos
 
 
-@dataclass
+
 class DeclPersonaje(NodoAST):
     nombre: str
     hp: int
@@ -36,7 +34,7 @@ class DeclPersonaje(NodoAST):
         self.defensa = defensa
 
 
-@dataclass
+
 class Turno(NodoAST):
     atacante: str
     victima: str
@@ -48,7 +46,7 @@ class Turno(NodoAST):
         self.victima = victima
 
 
-@dataclass
+
 class Repeat(NodoAST):
     veces: int
     cuerpo: list[NodoAST]
@@ -60,7 +58,7 @@ class Repeat(NodoAST):
         self.cuerpo = cuerpo
 
 
-@dataclass
+
 class Si(NodoAST):
     condicion: NodoAST
     entonces: list[NodoAST]
@@ -75,7 +73,7 @@ class Si(NodoAST):
         self.sino = sino
 
 
-@dataclass
+
 class Mientras(NodoAST):
     condicion: NodoAST
     cuerpo: list[NodoAST]
@@ -87,7 +85,7 @@ class Mientras(NodoAST):
         self.cuerpo = cuerpo
 
 
-@dataclass
+
 class DeclVar(NodoAST):
     tipo: str
     nombre: str
@@ -102,7 +100,7 @@ class DeclVar(NodoAST):
         self.inicializador = inicializador
 
 
-@dataclass
+
 class Asignacion(NodoAST):
     objetivo: NodoAST
     valor: NodoAST
@@ -114,7 +112,7 @@ class Asignacion(NodoAST):
         self.valor = valor
 
 
-@dataclass
+
 class Imprimir(NodoAST):
     valor: NodoAST
 
@@ -124,7 +122,7 @@ class Imprimir(NodoAST):
         self.valor = valor
 
 
-@dataclass
+
 class OpBinaria(NodoAST):
     operador: str
     izquierdo: NodoAST
@@ -138,7 +136,7 @@ class OpBinaria(NodoAST):
         self.derecho = derecho
 
 
-@dataclass
+
 class OpUnaria(NodoAST):
     operador: str
     operando: NodoAST
@@ -150,7 +148,7 @@ class OpUnaria(NodoAST):
         self.operando = operando
 
 
-@dataclass
+
 class Literal(NodoAST):
     valor: Any
     tipo: str
@@ -162,7 +160,7 @@ class Literal(NodoAST):
         self.tipo = tipo
 
 
-@dataclass
+
 class Identificador(NodoAST):
     nombre: str
 
@@ -172,7 +170,7 @@ class Identificador(NodoAST):
         self.nombre = nombre
 
 
-@dataclass
+
 class AccesoAtributo(NodoAST):
     objeto: str
     atributo: str
@@ -185,7 +183,7 @@ class AccesoAtributo(NodoAST):
 
 
 def mostrar_ast(nodo: NodoAST, sangria: str = "") -> str:
-    """Convierte un nodo del AST a string legible (en espanol)."""
+    """Convierte un nodo del AST a string legible (en español)."""
     partes = []
     prefijo = f"{sangria}+- "
 
