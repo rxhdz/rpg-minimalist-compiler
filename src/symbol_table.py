@@ -1,8 +1,8 @@
 """Tabla de símbolos con soporte para ámbitos anidados.
 
 Estructuras:
-  - EntradaSimbolo: almacena toda la información de una variable declarada
-  - TablaSimbolos: pila de ámbitos, declaración y resolución de símbolos
+  - SymbolEntry: almacena toda la información de una variable declarada
+  - SymbolTable: pila de ámbitos, declaración y resolución de símbolos
 """
 
 from dataclasses import dataclass, field
@@ -10,123 +10,123 @@ from typing import Any
 
 
 @dataclass
-class EntradaSimbolo:
+class SymbolEntry:
     """Informacion de una variable declarada en el programa."""
 
-    nombre: str
-    tipo: str                     # "personaje" | "numero"
-    linea: int = 0
-    columna: int = 0
-    inicializado: bool = False
+    name: str
+    type: str                     # "character" | "number"
+    line: int = 0
+    column: int = 0
+    initialized: bool = False
 
-    # Para personaje -- cada atributo tiene { "valor": int, "dir": int }
+    # Para personaje -- cada atributo tiene { "value": int, "addr": int }
     hp: dict | None = None
     atk: dict | None = None
-    defensa: dict | None = None
-    hp_estatico: int | None = None   # HP rastreado estaticamente (regla D3)
+    defense: dict | None = None
+    static_hp: int | None = None   # HP rastreado estaticamente (regla D3)
 
     # Para numero
-    dir: int | None = None
-    valor: Any | None = None         # valor estatico conocido (None si es runtime)
+    addr: int | None = None
+    value: Any | None = None         # valor estatico conocido (None si es runtime)
 
     def __repr__(self) -> str:
-        if self.tipo == "personaje":
-            hp_v = self.hp["valor"] if self.hp else "?"
-            atk_v = self.atk["valor"] if self.atk else "?"
-            def_v = self.defensa["valor"] if self.defensa else "?"
+        if self.type == "character":
+            hp_v = self.hp["value"] if self.hp else "?"
+            atk_v = self.atk["value"] if self.atk else "?"
+            def_v = self.defense["value"] if self.defense else "?"
             return (
-                f"EntradaSimbolo({self.nombre!r}, tipo=personaje, "
+                f"SymbolEntry({self.name!r}, type=character, "
                 f"hp={hp_v}, atk={atk_v}, def={def_v}, "
-                f"hp_estatico={self.hp_estatico})"
+                f"static_hp={self.static_hp})"
             )
         return (
-            f"EntradaSimbolo({self.nombre!r}, tipo={self.tipo!r}, "
-            f"dir={self.dir}, valor={self.valor}, "
-            f"inicializado={self.inicializado})"
+            f"SymbolEntry({self.name!r}, type={self.type!r}, "
+            f"addr={self.addr}, value={self.value}, "
+            f"initialized={self.initialized})"
         )
 
 
-class TablaSimbolos:
+class SymbolTable:
     """Tabla de simbolos con pila de ambitos anidados."""
 
     def __init__(self):
-        self.ambitos: list[dict[str, EntradaSimbolo]] = [{}]
-        self.contador_dir: int = 0
+        self.scopes: list[dict[str, SymbolEntry]] = [{}]
+        self.addr_counter: int = 0
 
     # -- Gestión de ámbitos ------------------------------------------------
 
-    def abrir_ambito(self):
-        self.ambitos.append({})
+    def open_scope(self):
+        self.scopes.append({})
 
-    def cerrar_ambito(self):
-        self.ambitos.pop()
+    def close_scope(self):
+        self.scopes.pop()
 
     # -- Declaracion -------------------------------------------------------
 
-    def declarar(self, entrada: EntradaSimbolo) -> bool:
+    def declare(self, entry: SymbolEntry) -> bool:
         """Declara un simbolo en el ambito actual.
 
         Retorna True si se declaro correctamente.
         Retorna False si ya existe (redeclaracion en el mismo ambito).
         """
-        nombre = entrada.nombre
-        if nombre in self.ambitos[-1]:
+        name = entry.name
+        if name in self.scopes[-1]:
             return False
 
         # Asignar direcciones de memoria
-        if entrada.tipo == "numero":
-            entrada.dir = self.contador_dir
-            self.contador_dir += 1
-        elif entrada.tipo == "personaje":
-            entrada.hp["dir"] = self.contador_dir
-            self.contador_dir += 1
-            entrada.atk["dir"] = self.contador_dir
-            self.contador_dir += 1
-            entrada.defensa["dir"] = self.contador_dir
-            self.contador_dir += 1
+        if entry.type == "number":
+            entry.addr = self.addr_counter
+            self.addr_counter += 1
+        elif entry.type == "character":
+            entry.hp["addr"] = self.addr_counter
+            self.addr_counter += 1
+            entry.atk["addr"] = self.addr_counter
+            self.addr_counter += 1
+            entry.defense["addr"] = self.addr_counter
+            self.addr_counter += 1
 
-        self.ambitos[-1][nombre] = entrada
+        self.scopes[-1][name] = entry
         return True
 
     # -- Resolucion --------------------------------------------------------
 
-    def resolver(self, nombre: str) -> EntradaSimbolo | None:
+    def resolve(self, name: str) -> SymbolEntry | None:
         """Busca un simbolo en todos los ambitos (del mas interno al externo).
 
         Retorna la entrada si existe, None si no.
         """
-        for ambito in reversed(self.ambitos):
-            if nombre in ambito:
-                return ambito[nombre]
+        for scope in reversed(self.scopes):
+            if name in scope:
+                return scope[name]
         return None
 
-    def esta_declarado(self, nombre: str) -> bool:
-        return self.resolver(nombre) is not None
+    def is_declared(self, name: str) -> bool:
+        return self.resolve(name) is not None
 
     # -- Rastreo estático de HP (regla D3) ---------------------------------
 
-    def obtener_hp_estatico(self, nombre: str) -> int | None:
-        entrada = self.resolver(nombre)
-        if entrada and entrada.tipo == "personaje":
-            return entrada.hp_estatico
+    def get_static_hp(self, name: str) -> int | None:
+        entry = self.resolve(name)
+        if entry and entry.type == "character":
+            return entry.static_hp
         return None
 
-    def actualizar_hp_estatico(self, nombre: str, nuevo_hp: int):
-        entrada = self.resolver(nombre)
-        if entrada and entrada.tipo == "personaje":
-            entrada.hp_estatico = nuevo_hp
+    def update_static_hp(self, name: str, new_hp: int):
+        entry = self.resolve(name)
+        if entry and entry.type == "character":
+            entry.static_hp = new_hp
 
     # -- Utilidades --------------------------------------------------------
 
-    def obtener_tipo(self, nombre: str) -> str | None:
-        entrada = self.resolver(nombre)
-        return entrada.tipo if entrada else None
+    def get_type(self, name: str) -> str | None:
+        entry = self.resolve(name)
+        return entry.type if entry else None
 
-    def mostrar(self) -> str:
+    def display(self) -> str:
         """Retorna una representación legible de todos los ámbitos."""
-        partes = []
-        for i, ambito in enumerate(self.ambitos):
-            partes.append(f"--- Ambito {i} ---")
-            for nombre, entrada in ambito.items():
-                partes.append(f"  {entrada}")
-        return "\n".join(partes)
+        parts = []
+        for i, scope in enumerate(self.scopes):
+            parts.append(f"--- Scope {i} ---")
+            for name, entry in scope.items():
+                parts.append(f"  {entry}")
+        return "\n".join(parts)

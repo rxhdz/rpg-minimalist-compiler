@@ -1,28 +1,28 @@
-personaje hero hp=100 atk=25 def=10;
-personaje goblin hp=40 atk=8 def=2;
-personaje boss hp=200 atk=15 def=5;
+character hero hp=100 atk=25 def=10;
+character goblin hp=40 atk=8 def=2;
+character boss hp=200 atk=15 def=5;
 
-turno hero usar ataque en goblin;
-turno goblin usar ataque en hero;
+turn hero use attack on goblin;
+turn goblin use attack on hero;
 
-numero danio_extra = 10;
+number danio_extra = 10;
 hero.atk = hero.atk + danio_extra;
 
-si goblin.hp > 0 entonces {
-    turno hero usar ataque en goblin;
-} sino {
-    imprimir "Goblin derrotado";
-} fin
+if goblin.hp > 0 then {
+    turn hero use attack on goblin;
+} else {
+    print "Goblin derrotado";
+} end
 
-repeat 2 veces {
-    turno hero usar ataque en boss;
+repeat 2 times {
+    turn hero use attack on boss;
 }
 
-mientras hero.hp > 0 hacer {
-    numero ronda = 1;
-    turno hero usar ataque en boss;
+while hero.hp > 0 do {
+    number ronda = 1;
+    turn hero use attack on boss;
     ronda = ronda + 1;
-} fin
+} end
 
-imprimir "Combate finalizado";
-imprimir hero.hp;
+print "Combate finalizado";
+print hero.hp;

@@ -5,236 +5,236 @@ import lark
 from lark import Token, v_args
 
 from .ast_nodes import (
-    NodoAST,
-    Programa,
-    DeclPersonaje,
-    Turno,
+    ASTNode,
+    Program,
+    CharacterDecl,
+    Turn,
     Repeat,
-    Si,
-    Mientras,
-    DeclVar,
-    Asignacion,
-    Imprimir,
-    OpBinaria,
-    OpUnaria,
+    If,
+    While,
+    VarDecl,
+    Assignment,
+    Print,
+    BinaryOp,
+    UnaryOp,
     Literal,
-    Identificador,
-    AccesoAtributo,
-    mostrar_ast,
+    Identifier,
+    AttrAccess,
+    show_ast,
 )
 
-RUTA_GRAMATICA = Path(__file__).resolve().parent.parent / "grammar.lark"
+GRAMMAR_PATH = Path(__file__).resolve().parent.parent / "grammar.lark"
 
 
 # ---------------------------------------------------------------------------
 # Transformador: convierte el arbol de Lark (lark.Tree) en AST propio
 # ---------------------------------------------------------------------------
 
-class TransformadorAST(lark.Transformer):
+class ASTTransformer(lark.Transformer):
     """Convierte cada regla de la gramatica en su nodo AST correspondiente."""
 
     # -- Programa -----------------------------------------------------------
 
-    def program(self, hijos):
-        return Programa(hijos)
+    def program(self, children):
+        return Program(children)
 
     # -- Sentencias ---------------------------------------------------------
 
-    def statement(self, hijos):
-        return hijos[0]
+    def statement(self, children):
+        return children[0]
 
     # -- Declaracion de personaje -------------------------------------------
     # stat_val: MINUS? NUMBER
-    # personaje_decl: PERSONAJE IDENTIFIER HP ASSIGN stat_val ATK ASSIGN stat_val DEF ASSIGN stat_val SEMICOLON
+    # character_decl: CHARACTER IDENTIFIER HP ASSIGN stat_val ATK ASSIGN stat_val DEF ASSIGN stat_val SEMICOLON
 
-    def stat_val(self, hijos):
+    def stat_val(self, children):
         try:
-            if len(hijos) == 1:
-                return int(hijos[0])
-            return -int(hijos[1])
+            if len(children) == 1:
+                return int(children[0])
+            return -int(children[1])
         except ValueError:
             raise lark.GrammarError(
-                f"El valor '{hijos[-1]}' debe ser un número entero, no decimal."
+                f"El valor '{children[-1]}' debe ser un número entero, no decimal."
             )
 
     @v_args(meta=True)
-    def personaje_decl(self, hijos, meta):
-        nombre = str(hijos[1])
-        hp = int(hijos[4])
-        atk = int(hijos[7])
-        defensa = int(hijos[10])
-        return DeclPersonaje(nombre, hp, atk, defensa, meta.line, meta.column)
+    def character_decl(self, children, meta):
+        name = str(children[1])
+        hp = int(children[4])
+        atk = int(children[7])
+        defense = int(children[10])
+        return CharacterDecl(name, hp, atk, defense, meta.line, meta.column)
 
     # -- Turno de combate ---------------------------------------------------
-    # turno_stmt: TURNO IDENTIFIER USAR ATAQUE EN IDENTIFIER SEMICOLON
+    # turn_stmt: TURN IDENTIFIER USE ATTACK ON IDENTIFIER SEMICOLON
 
     @v_args(meta=True)
-    def turno_stmt(self, hijos, meta):
-        atacante = str(hijos[1])
-        victima = str(hijos[5])
-        return Turno(atacante, victima, meta.line, meta.column)
+    def turn_stmt(self, children, meta):
+        attacker = str(children[1])
+        victim = str(children[5])
+        return Turn(attacker, victim, meta.line, meta.column)
 
     # -- Repeticion fija ----------------------------------------------------
-    # repeat_stmt: REPEAT NUMBER VECES LBRACE statement* RBRACE
+    # repeat_stmt: REPEAT NUMBER TIMES LBRACE statement* RBRACE
 
     @v_args(meta=True)
-    def repeat_stmt(self, hijos, meta):
-        veces = int(hijos[1])
-        cuerpo = list(hijos[4:-1])
-        return Repeat(veces, cuerpo, meta.line, meta.column)
+    def repeat_stmt(self, children, meta):
+        times = int(children[1])
+        body = list(children[4:-1])
+        return Repeat(times, body, meta.line, meta.column)
 
-    # -- Condicional si/sino/fin --------------------------------------------
-    # si_stmt: SI condition ENTONCES LBRACE statement* RBRACE
-    #          (SINO LBRACE statement* RBRACE)? FIN
+    # -- Condicional if/else/end --------------------------------------------
+    # if_stmt: IF condition THEN LBRACE statement* RBRACE
+    #          (ELSE LBRACE statement* RBRACE)? END
 
     @v_args(meta=True)
-    def si_stmt(self, hijos, meta):
-        condicion = hijos[1]
+    def if_stmt(self, children, meta):
+        condition = children[1]
 
         # Ubicar llaves de apertura/cierre
-        indices_llave_abre = [
-            i for i, c in enumerate(hijos)
+        open_brace_indices = [
+            i for i, c in enumerate(children)
             if isinstance(c, Token) and c.type == "LBRACE"
         ]
-        indices_llave_cierra = [
-            i for i, c in enumerate(hijos)
+        close_brace_indices = [
+            i for i, c in enumerate(children)
             if isinstance(c, Token) and c.type == "RBRACE"
         ]
 
-        # Bloque "entonces": entre la primera LBRACE y la primera RBRACE
-        entonces = list(hijos[indices_llave_abre[0] + 1:indices_llave_cierra[0]])
+        # Bloque "then": entre la primera LBRACE y la primera RBRACE
+        then_body = list(children[open_brace_indices[0] + 1:close_brace_indices[0]])
 
-        # Bloque "sino" (opcional)
-        if len(indices_llave_cierra) > 1:
-            sino = list(hijos[indices_llave_abre[1] + 1:indices_llave_cierra[1]])
+        # Bloque "else" (opcional)
+        if len(close_brace_indices) > 1:
+            else_body = list(children[open_brace_indices[1] + 1:close_brace_indices[1]])
         else:
-            sino = None
+            else_body = None
 
-        return Si(condicion, entonces, sino, meta.line, meta.column)
+        return If(condition, then_body, else_body, meta.line, meta.column)
 
-    # -- Bucle mientras -----------------------------------------------------
-    # mientras_stmt: MIENTRAS condition HACER LBRACE statement* RBRACE FIN
+    # -- Bucle while --------------------------------------------------------
+    # while_stmt: WHILE condition DO LBRACE statement* RBRACE END
 
     @v_args(meta=True)
-    def mientras_stmt(self, hijos, meta):
-        condicion = hijos[1]
-        cuerpo = list(hijos[4:-2])
-        return Mientras(condicion, cuerpo, meta.line, meta.column)
+    def while_stmt(self, children, meta):
+        condition = children[1]
+        body = list(children[4:-2])
+        return While(condition, body, meta.line, meta.column)
 
     # -- Declaracion de variable numerica -----------------------------------
-    # var_decl: NUMERO IDENTIFIER (ASSIGN expression)? SEMICOLON
+    # var_decl: NUMBER_TYPE IDENTIFIER (ASSIGN expression)? SEMICOLON
 
     @v_args(meta=True)
-    def var_decl(self, hijos, meta):
-        nombre = str(hijos[1])
-        inicializador = hijos[3] if len(hijos) > 3 else None
-        return DeclVar("numero", nombre, inicializador, meta.line, meta.column)
+    def var_decl(self, children, meta):
+        name = str(children[1])
+        initializer = children[3] if len(children) > 3 else None
+        return VarDecl("number", name, initializer, meta.line, meta.column)
 
     # -- Asignacion ---------------------------------------------------------
     # assignment: lvalue ASSIGN expression SEMICOLON
 
     @v_args(meta=True)
-    def assignment(self, hijos, meta):
-        return Asignacion(hijos[0], hijos[2], meta.line, meta.column)
+    def assignment(self, children, meta):
+        return Assignment(children[0], children[2], meta.line, meta.column)
 
     # -- Lado izquierdo de asignacion ---------------------------------------
     # lvalue: IDENTIFIER | attr_access
 
     @v_args(meta=True)
-    def lvalue(self, hijos, meta):
-        hijo = hijos[0]
-        if isinstance(hijo, Token) and hijo.type == "IDENTIFIER":
-            return Identificador(str(hijo), meta.line, meta.column)
-        return hijo  # Ya es un AccesoAtributo
+    def lvalue(self, children, meta):
+        child = children[0]
+        if isinstance(child, Token) and child.type == "IDENTIFIER":
+            return Identifier(str(child), meta.line, meta.column)
+        return child  # Ya es un AttrAccess
 
     # -- Impresion ----------------------------------------------------------
-    # print_stmt: IMPRIMIR expression SEMICOLON
+    # print_stmt: PRINT expression SEMICOLON
 
     @v_args(meta=True)
-    def print_stmt(self, hijos, meta):
-        return Imprimir(hijos[1], meta.line, meta.column)
+    def print_stmt(self, children, meta):
+        return Print(children[1], meta.line, meta.column)
 
     # -- Condicion ----------------------------------------------------------
     # condition: expression relop expression
 
     @v_args(meta=True)
-    def condition(self, hijos, meta):
-        return OpBinaria(hijos[1], hijos[0], hijos[2], meta.line, meta.column)
+    def condition(self, children, meta):
+        return BinaryOp(children[1], children[0], children[2], meta.line, meta.column)
 
     # -- Operador relacional ------------------------------------------------
     # relop: LT | GT | LTE | GTE | EQ | NEQ
 
-    def relop(self, hijos):
-        return str(hijos[0])
+    def relop(self, children):
+        return str(children[0])
 
     # -- Expresiones aritmeticas (3 niveles de precedencia) -----------------
 
-    def expression(self, hijos):
-        return hijos[0]
+    def expression(self, children):
+        return children[0]
 
-    def addition(self, hijos):
-        resultado = hijos[0]
+    def addition(self, children):
+        result = children[0]
         i = 1
-        while i < len(hijos):
-            operador = str(hijos[i])
-            derecho = hijos[i + 1]
-            linea = getattr(resultado, "linea", 0)
-            col = getattr(resultado, "columna", 0)
-            resultado = OpBinaria(operador, resultado, derecho, linea, col)
+        while i < len(children):
+            operator = str(children[i])
+            right = children[i + 1]
+            line = getattr(result, "line", 0)
+            col = getattr(result, "column", 0)
+            result = BinaryOp(operator, result, right, line, col)
             i += 2
-        return resultado
+        return result
 
-    def multiplication(self, hijos):
-        resultado = hijos[0]
+    def multiplication(self, children):
+        result = children[0]
         i = 1
-        while i < len(hijos):
-            operador = str(hijos[i])
-            derecho = hijos[i + 1]
-            linea = getattr(resultado, "linea", 0)
-            col = getattr(resultado, "columna", 0)
-            resultado = OpBinaria(operador, resultado, derecho, linea, col)
+        while i < len(children):
+            operator = str(children[i])
+            right = children[i + 1]
+            line = getattr(result, "line", 0)
+            col = getattr(result, "column", 0)
+            result = BinaryOp(operator, result, right, line, col)
             i += 2
-        return resultado
+        return result
 
-    def unary(self, hijos):
-        if len(hijos) == 1:
-            return hijos[0]
-        operador = str(hijos[0])
-        operando = hijos[1]
-        linea = operando.linea if hasattr(operando, "linea") else 0
-        col = operando.columna if hasattr(operando, "columna") else 0
-        return OpUnaria(operador, operando, linea, col)
+    def unary(self, children):
+        if len(children) == 1:
+            return children[0]
+        operator = str(children[0])
+        operand = children[1]
+        line = operand.line if hasattr(operand, "line") else 0
+        col = operand.column if hasattr(operand, "column") else 0
+        return UnaryOp(operator, operand, line, col)
 
-    def primary(self, hijos):
-        if len(hijos) == 3:
-            return hijos[1]  # ( expression )
-        hijo = hijos[0]
-        if isinstance(hijo, Token):
-            if hijo.type == "NUMBER":
-                valor = float(hijo) if "." in str(hijo) else int(hijo)
-                return Literal(valor, "numero", hijo.line, hijo.column)
-            if hijo.type == "STRING":
-                crudo = str(hijo)[1:-1]
-                valor = (
-                    crudo.replace("\\n", "\n")
+    def primary(self, children):
+        if len(children) == 3:
+            return children[1]  # ( expression )
+        child = children[0]
+        if isinstance(child, Token):
+            if child.type == "NUMBER":
+                value = float(child) if "." in str(child) else int(child)
+                return Literal(value, "number", child.line, child.column)
+            if child.type == "STRING":
+                raw = str(child)[1:-1]
+                value = (
+                    raw.replace("\\n", "\n")
                          .replace("\\t", "\t")
                          .replace('\\"', '"')
                          .replace("\\\\", "\\")
                 )
-                return Literal(valor, "cadena", hijo.line, hijo.column)
-            if hijo.type == "IDENTIFIER":
-                return Identificador(str(hijo), hijo.line, hijo.column)
-        return hijo
+                return Literal(value, "string", child.line, child.column)
+            if child.type == "IDENTIFIER":
+                return Identifier(str(child), child.line, child.column)
+        return child
 
     # -- Acceso a atributo --------------------------------------------------
     # attr_access: IDENTIFIER DOT (HP | ATK | DEF)
     # indices:       0          1    2
 
     @v_args(meta=True)
-    def attr_access(self, hijos, meta):
-        objeto = str(hijos[0])   # nombre del personaje
-        atributo = str(hijos[2]) # "hp", "atk" o "def" (hijos[1] es el punto)
-        return AccesoAtributo(objeto, atributo, meta.line, meta.column)
+    def attr_access(self, children, meta):
+        owner = str(children[0])   # nombre del personaje
+        attribute = str(children[2]) # "hp", "atk" o "def" (children[1] es el punto)
+        return AttrAccess(owner, attribute, meta.line, meta.column)
 
 
 # ---------------------------------------------------------------------------
@@ -244,53 +244,47 @@ class TransformadorAST(lark.Transformer):
 _parser = None
 
 
-def _crear_parser():
+def _create_parser():
     """Crea el parser Lark con la gramatica del DSL TurnGame."""
-    with open(RUTA_GRAMATICA, "r", encoding="utf-8") as f:
-        gramatica = f.read()
+    with open(GRAMMAR_PATH, "r", encoding="utf-8") as f:
+        grammar_text = f.read()
     return lark.Lark(
-        gramatica,
+        grammar_text,
         parser="lalr",
         maybe_placeholders=True,
         propagate_positions=True,
     )
 
 
-def obtener_parser():
+def get_parser():
     """Retorna el parser (singleton)."""
     global _parser
     if _parser is None:
-        _parser = _crear_parser()
+        _parser = _create_parser()
     return _parser
 
 
-def parsear_archivo(ruta: str, on_error=None) -> lark.Tree:
+def parse_file(path: str, on_error=None) -> lark.Tree:
     """Analiza un archivo .tg y retorna el arbol de Lark."""
-    parser = obtener_parser()
-    with open(ruta, "r", encoding="utf-8") as f:
-        texto = f.read()
-    return parser.parse(texto, on_error=on_error)
+    parser = get_parser()
+    with open(path, "r", encoding="utf-8") as f:
+        text = f.read()
+    return parser.parse(text, on_error=on_error)
 
 
-def parsear_linea(texto: str, on_error=None) -> lark.Tree:
+def parse_line(text: str, on_error=None) -> lark.Tree:
     """Analiza una linea de texto y retorna el arbol de Lark."""
-    parser = obtener_parser()
-    return parser.parse(texto, on_error=on_error)
+    parser = get_parser()
+    return parser.parse(text, on_error=on_error)
 
 
-def analizar_archivo(ruta: str, on_error=None) -> Programa:
-    """Analiza un archivo .tg y retorna el AST (Programa)."""
-    arbol_lark = parsear_archivo(ruta, on_error=on_error)
-    return TransformadorAST().transform(arbol_lark)
+def analyze_file(path: str, on_error=None) -> Program:
+    """Analiza un archivo .tg y retorna el AST (Program)."""
+    lark_tree = parse_file(path, on_error=on_error)
+    return ASTTransformer().transform(lark_tree)
 
 
-def analizar_linea(texto: str, on_error=None) -> NodoAST:
+def analyze_line(text: str, on_error=None) -> ASTNode:
     """Analiza una linea de texto y retorna el nodo AST resultante."""
-    arbol_lark = parsear_linea(texto, on_error=on_error)
-    return TransformadorAST().transform(arbol_lark)
-
-
-# Mantener compatibilidad con codigo existente
-get_parser = obtener_parser
-parse_file = parsear_archivo
-parse_line = parsear_linea
+    lark_tree = parse_line(text, on_error=on_error)
+    return ASTTransformer().transform(lark_tree)

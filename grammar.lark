@@ -1,24 +1,24 @@
 // TurnGame DSL — Gramática para Lark (LALR)
 
 // ----- Terminales (palabras reservadas) -----
-PERSONAJE: "personaje"
+CHARACTER: "character"
 HP: "hp"
 ATK: "atk"
 DEF: "def"
-TURNO: "turno"
-USAR: "usar"
-ATAQUE: "ataque"
-EN: "en"
+TURN: "turn"
+USE: "use"
+ATTACK: "attack"
+ON: "on"
 REPEAT: "repeat"
-VECES: "veces"
-SI: "si"
-ENTONCES: "entonces"
-SINO: "sino"
-FIN: "fin"
-MIENTRAS: "mientras"
-HACER: "hacer"
-NUMERO: "numero"
-IMPRIMIR: "imprimir"
+TIMES_KW: "times"
+IF: "if"
+THEN: "then"
+ELSE: "else"
+END: "end"
+WHILE: "while"
+DO: "do"
+NUMBER_TYPE: "number"
+PRINT: "print"
 
 // ----- Literales -----
 NUMBER: /\d+(\.\d+)?/
@@ -63,25 +63,25 @@ COMMENT_BLOCK: /\/\*[\s\S]*?\*\//
 ?start: program
 program: statement*
 
-statement: personaje_decl
-         | turno_stmt
+statement: character_decl
+         | turn_stmt
          | repeat_stmt
-         | si_stmt
-         | mientras_stmt
+         | if_stmt
+         | while_stmt
          | var_decl
          | assignment
          | print_stmt
 
 stat_val: MINUS? NUMBER
-personaje_decl: PERSONAJE IDENTIFIER HP ASSIGN stat_val ATK ASSIGN stat_val DEF ASSIGN stat_val SEMICOLON
-turno_stmt: TURNO IDENTIFIER USAR ATAQUE EN IDENTIFIER SEMICOLON
-repeat_stmt: REPEAT NUMBER VECES LBRACE statement* RBRACE
-si_stmt: SI condition ENTONCES LBRACE statement* RBRACE (SINO LBRACE statement* RBRACE)? FIN
-mientras_stmt: MIENTRAS condition HACER LBRACE statement* RBRACE FIN
-var_decl: NUMERO IDENTIFIER (ASSIGN expression)? SEMICOLON
+character_decl: CHARACTER IDENTIFIER HP ASSIGN stat_val ATK ASSIGN stat_val DEF ASSIGN stat_val SEMICOLON
+turn_stmt: TURN IDENTIFIER USE ATTACK ON IDENTIFIER SEMICOLON
+repeat_stmt: REPEAT NUMBER TIMES_KW LBRACE statement* RBRACE
+if_stmt: IF condition THEN LBRACE statement* RBRACE (ELSE LBRACE statement* RBRACE)? END
+while_stmt: WHILE condition DO LBRACE statement* RBRACE END
+var_decl: NUMBER_TYPE IDENTIFIER (ASSIGN expression)? SEMICOLON
 assignment: lvalue ASSIGN expression SEMICOLON
 lvalue: IDENTIFIER | attr_access
-print_stmt: IMPRIMIR expression SEMICOLON
+print_stmt: PRINT expression SEMICOLON
 
 condition: expression relop expression
 
