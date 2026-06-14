@@ -48,21 +48,19 @@ class ASTTransformer(lark.Transformer):
     # character_decl: CHARACTER IDENTIFIER HP ASSIGN stat_val ATK ASSIGN stat_val DEF ASSIGN stat_val SEMICOLON
 
     def stat_val(self, children):
-        try:
-            if len(children) == 1:
-                return int(children[0])
-            return -int(children[1])
-        except ValueError:
-            raise lark.GrammarError(
-                f"El valor '{children[-1]}' debe ser un número entero, no decimal."
-            )
+        if len(children) == 1:
+            raw = str(children[0])
+            return float(raw) if "." in raw else int(raw)
+        raw = str(children[1])
+        val = float(raw) if "." in raw else int(raw)
+        return -val
 
     @v_args(meta=True)
     def character_decl(self, children, meta):
         name = str(children[1])
-        hp = int(children[4])
-        atk = int(children[7])
-        defense = int(children[10])
+        hp = children[4]
+        atk = children[7]
+        defense = children[10]
         return CharacterDecl(name, hp, atk, defense, meta.line, meta.column)
 
     # -- Turno de combate ---------------------------------------------------

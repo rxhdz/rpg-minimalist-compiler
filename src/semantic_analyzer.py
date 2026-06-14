@@ -199,7 +199,22 @@ class SemanticAnalyzer:
             )
             return
 
-        # D1: hp, atk, def no negativos
+        # D1: hp, atk, def enteros no negativos
+        if isinstance(node.hp, float):
+            self._error(
+                f"'hp' de '{node.name}' debe ser un número entero, no {node.hp}.",
+                node.line, node.column,
+            )
+        if isinstance(node.atk, float):
+            self._error(
+                f"'atk' de '{node.name}' debe ser un número entero, no {node.atk}.",
+                node.line, node.column,
+            )
+        if isinstance(node.defense, float):
+            self._error(
+                f"'def' de '{node.name}' debe ser un número entero, no {node.defense}.",
+                node.line, node.column,
+            )
         if node.hp < 0:
             self._error(
                 f"'hp' de '{node.name}' es negativo ({node.hp}). Debe ser >= 0.",

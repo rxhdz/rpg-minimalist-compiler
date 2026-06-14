@@ -21,11 +21,11 @@ class Program(ASTNode):
 
 class CharacterDecl(ASTNode):
     name: str
-    hp: int
-    atk: int
-    defense: int
+    hp: int | float
+    atk: int | float
+    defense: int | float
 
-    def __init__(self, name: str, hp: int, atk: int, defense: int,
+    def __init__(self, name: str, hp: int | float, atk: int | float, defense: int | float,
                  line: int = 0, column: int = 0):
         super().__init__(line, column)
         self.name = name
