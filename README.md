@@ -56,7 +56,7 @@ sintactico (sin validacion semantica). Escribe `salir` para terminar.
 ├── grammar.lark              # Gramatica EBNF del DSL (Lark)
 ├── main.py                   # Punto de entrada: CLI y REPL
 ├── src/
-│   ├── ast_nodes.py          # Clases del AST (Programa, DeclPersonaje, etc.)
+│   ├── ast_nodes.py          # Clases del AST (Program, CharacterDecl, etc.)
 │   ├── parser.py             # Parser Lark y transformacion a AST
 │   ├── symbol_table.py       # Tabla de simbolos con ambitos anidados
 │   └── semantic_analyzer.py  # Analisis semantico y reglas del dominio
@@ -76,19 +76,170 @@ y defensa. El programa declara personajes y ejecuta turnos de combate.
 ### Palabras reservadas
 
 ```
-personaje  hp  atk  def
-turno  usar  ataque  en
-repeat  veces
-si  entonces  sino  fin
-mientras  hacer
-numero  imprimir
+character  hp  atk  def
+turn  use  attack  on
+repeat  times
+if  then  else  end
+while  do
+number  print
 ```
 
-### Ejemplo basico
+### Tipos de datos
+
+- `number` — numeros enteros no negativos
+- `string` — cadenas de texto (solamente en `print`)
+- `boolean` — resultado de comparaciones (`==`, `!=`, `<`, `>`, `<=`, `>=`)
+
+### Declaracion de personaje
 
 ```
-personaje hero hp=100 atk=25 def=10;
-personaje goblin hp=40 atk=8 def=2;
-turno hero usar ataque en goblin;
-imprimir "Combate finalizado";
+character <nombre> hp=<valor> atk=<valor> def=<valor>;
 ```
+
+Ejemplo:
+```
+character hero hp=100 atk=25 def=10;
+```
+
+### Turno de combate
+
+```
+turn <atacante> use attack on <victima>;
+```
+
+Ejemplo:
+```
+turn hero use attack on goblin;
+```
+
+Mecanica de combate:
+- El atacante causa `max(0, atk - def)` de daño a la victima
+- El HP de la victima se reduce en esa cantidad
+- Si el HP de un personaje llega a 0 o menos, no puede atacar ni ser atacado
+
+### Asignacion
+
+```
+<variable> = <expresion>;
+<personaje>.<atributo> = <expresion>;
+```
+
+Ejemplos:
+```
+number danio_extra = 10;
+hero.atk = hero.atk + danio_extra;
+goblin.hp = goblin.hp - 5;
+```
+
+### Lectura de atributos
+
+```
+<personaje>.hp
+<personaje>.atk
+<personaje>.def
+```
+
+### Condicional if
+
+```
+if <condicion> then {
+    ...
+} else {
+    ...
+} end
+```
+
+La rama `else` es opcional.
+
+### Bucle repeat
+
+```
+repeat <N> times {
+    ...
+}
+```
+
+Ejecuta el cuerpo `N` veces.
+
+### Bucle while
+
+```
+while <condicion> do {
+    ...
+} end
+```
+
+### Impresion
+
+```
+print <expresion>;
+print "texto literal";
+```
+
+### Expresiones
+
+Soportan los operadores aritmeticos `+`, `-`, `*`, `/` (con precedencia estandar)
+y parentesis `(`, `)`. Las condiciones usan los operadores relacionales
+`==`, `!=`, `<`, `>`, `<=`, `>=`.
+
+### Variables numericas
+
+```
+number <nombre> = <expresion>;
+number <nombre>;
+```
+
+Deben ser enteros no negativos. La inicializacion es opcional.
+
+### Ejemplo completo
+
+```
+character hero hp=100 atk=25 def=10;
+character goblin hp=40 atk=8 def=2;
+character boss hp=200 atk=15 def=5;
+
+turn hero use attack on goblin;
+turn goblin use attack on hero;
+
+number danio_extra = 10;
+hero.atk = hero.atk + danio_extra;
+
+if goblin.hp > 0 then {
+    turn hero use attack on goblin;
+} else {
+    print "Goblin derrotado";
+} end
+
+repeat 2 times {
+    turn hero use attack on boss;
+}
+
+while hero.hp > 0 do {
+    number ronda = 1;
+    turn hero use attack on boss;
+    ronda = ronda + 1;
+} end
+
+print "Combate finalizado";
+print hero.hp;
+```
+
+## Reglas semanticas
+
+### Reglas generales
+
+| Regla | Descripcion |
+|---|---|
+| G1 | Toda variable debe ser declarada antes de usarse |
+| G2 | No se puede redeclarar una variable en el mismo ambito |
+| G3 | Los tipos deben ser compatibles en asignaciones y operaciones |
+| G4 | No se puede usar una variable antes de ser inicializada |
+
+### Reglas de dominio
+
+| Regla | Descripcion |
+|---|---|
+| D1 | HP, ATK y DEF de personaje deben ser >= 0 |
+| D2 | Atacante y victima deben estar declarados como personaje |
+| D3 | No se puede atacar con un personaje con HP <= 0, ni a un personaje con HP <= 0 |
+| D4 | Las variables de tipo `number` deben ser enteras no negativas |
