@@ -398,6 +398,7 @@ class SemanticAnalyzer:
                     f"con una expresion de tipo '{expr_type}'.",
                     node.line, node.column,
                 )
+                return
 
             # D4: evaluar estaticamente
             val, _ = self._evaluate_expression(node.initializer)
