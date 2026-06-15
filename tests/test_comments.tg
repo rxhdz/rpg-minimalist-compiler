@@ -1,0 +1,21 @@
+// Comentario de linea simple
+character hero hp=100 atk=25 def=10;  // comentario tras codigo
+/* comentario de bloque en una linea */
+character goblin hp=40 atk=8 def=2;
+/*
+   comentario de bloque multilinea
+   con varias lineas de texto
+*/
+character boss hp=200 atk=15 def=5;
+
+/* comentario entre sentencias */
+turn hero use attack on goblin;
+turn goblin use attack on hero; /* otro comentario al final */
+
+/* comentario */ number danio_extra /* entre */ = /* tokens */ 10 /* ; */ ;
+
+// combinacion de ambos tipos de comentarios
+hero.atk = hero.atk + danio_extra;  /* bloque */ // y linea
+
+print "Combate finalizado";
+print hero.hp;
