@@ -269,6 +269,7 @@ class SemanticAnalyzer:
                 f"'{node.attacker}' no ha sido declarado como personaje.",
                 node.line, node.column,
             )
+            return
         elif attacker.type != "character":
             self._error(
                 f"'{node.attacker}' no es un personaje (es '{attacker.type}').",
