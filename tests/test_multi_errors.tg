@@ -1,0 +1,5 @@
+character hero hp=100 atk=25 def=10;
+character goblin hp=40 atk=8 def=2
+character boss hp=200 atk=15 def=5;
+turn hero use attack on goblin
+print "done";

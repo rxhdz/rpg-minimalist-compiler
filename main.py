@@ -64,9 +64,10 @@ def format_error(error: Exception) -> str:
         )
     if isinstance(error, lark.UnexpectedToken):
         expected = ", ".join(_translate_token(t) for t in error.expected)
+        found = "<fin de archivo>" if error.token.type == "$END" else error.token.value
         return (
             f"Error sintáctico [línea {error.line}, columna {error.column}]: "
-            f"se esperaba {expected}, se encontró '{error.token.value}'"
+            f"se esperaba {expected}, se encontró '{found}'"
         )
     if isinstance(error, lark.LarkError):
         return f"Error sintáctico: {error}"
@@ -76,8 +77,26 @@ def format_error(error: Exception) -> str:
 def execute_file(path: str, show_tree: bool = True):
     syntax_errors: list[str] = []
 
+    SYNC_TOKENS = {"SEMICOLON", "RBRACE", "END", "ELSE"}
+
     def recovery_handler(error):
         syntax_errors.append(format_error(error))
+        ip = error.interactive_parser
+        gen = ip.lexer_state.lex(ip.parser_state)
+        while True:
+            try:
+                token = next(gen)
+            except StopIteration:
+                break
+            except lark.UnexpectedToken:
+                gen = ip.lexer_state.lex(ip.parser_state)
+                continue
+            try:
+                ip.parser_state.feed_token(token)
+            except lark.UnexpectedToken:
+                continue
+            if token.type in SYNC_TOKENS:
+                break
         return True
 
     try:
