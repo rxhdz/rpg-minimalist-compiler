@@ -108,6 +108,10 @@ class SemanticAnalyzer:
                 if node.operator == "/":
                     if vd != 0:
                         return vi / vd, "number"
+                    self._error(
+                        "Division por cero en expresion estatica.",
+                        node.line, node.column,
+                    )
         return None, "number"
 
     # ------------------------------------------------------------------
@@ -504,13 +508,21 @@ class SemanticAnalyzer:
                 )
 
             val, _ = self._evaluate_expression(node.value)
-            if val is not None and val < 0:
-                self._error(
-                    f"El atributo '{node.target.attribute}' de "
-                    f"'{node.target.owner}' no puede ser negativo "
-                    f"(valor: {val}).",
-                    node.line, node.column,
-                )
+            if val is not None:
+                if isinstance(val, float) and not val.is_integer():
+                    self._error(
+                        f"El atributo '{node.target.attribute}' de "
+                        f"'{node.target.owner}' debe ser entero, "
+                        f"no '{val}'.",
+                        node.line, node.column,
+                    )
+                elif val < 0:
+                    self._error(
+                        f"El atributo '{node.target.attribute}' de "
+                        f"'{node.target.owner}' no puede ser negativo "
+                        f"(valor: {val}).",
+                        node.line, node.column,
+                    )
 
             # A3: actualizar la tabla de símbolos si el valor es evaluable
             if val is not None:
