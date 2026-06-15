@@ -50,10 +50,14 @@ class ASTTransformer(lark.Transformer):
     def stat_val(self, children):
         if len(children) == 1:
             raw = str(children[0])
-            return float(raw) if "." in raw else int(raw)
-        raw = str(children[1])
-        val = float(raw) if "." in raw else int(raw)
-        return -val
+            val = float(raw) if "." in raw else int(raw)
+        else:
+            raw = str(children[1])
+            val = float(raw) if "." in raw else int(raw)
+            val = -val
+        if isinstance(val, float) and val.is_integer():
+            val = int(val)
+        return val
 
     @v_args(meta=True)
     def character_decl(self, children, meta):

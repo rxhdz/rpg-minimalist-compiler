@@ -263,6 +263,7 @@ class SemanticAnalyzer:
                 f"'{node.attacker}' no es un personaje (es '{attacker.type}').",
                 node.line, node.column,
             )
+            return
 
         # D2: victima debe estar declarada como personaje
         victim = self.symbol_table.resolve(node.victim)
