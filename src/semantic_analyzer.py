@@ -60,7 +60,14 @@ class SemanticAnalyzer:
         )
 
     def _get_type(self, node: ASTNode) -> str | None:
-        """Determina el tipo de una expresion."""
+        """Determina el tipo de una expresion.
+
+        Retorna "boolean" solo para expresiones relacionales
+        (>, <, ==, !=, etc.). Este tipo NO se almacena en la tabla
+        de simbolos: no existen variables ni literales booleanos
+        en el DSL. Se usa unicamente para validar condiciones
+        de 'si' y 'mientras'.
+        """
         if isinstance(node, Literal):
             return node.type
         if isinstance(node, Identifier):
