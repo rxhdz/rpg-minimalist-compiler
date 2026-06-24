@@ -3,11 +3,12 @@
 // ----- Terminales (palabras reservadas) -----
 CHARACTER: "character"
 HP: "hp"
+MP: "mp"
+MP_REGEN: "mp_regen"
 ATK: "atk"
 DEF: "def"
 TURN: "turn"
 USE: "use"
-ATTACK: "attack"
 ON: "on"
 REPEAT: "repeat"
 TIMES_KW: "times"
@@ -73,8 +74,8 @@ statement: character_decl
          | print_stmt
 
 stat_val: MINUS? NUMBER
-character_decl: CHARACTER IDENTIFIER HP ASSIGN stat_val ATK ASSIGN stat_val DEF ASSIGN stat_val SEMICOLON
-turn_stmt: TURN IDENTIFIER USE ATTACK ON IDENTIFIER SEMICOLON
+character_decl: CHARACTER IDENTIFIER HP ASSIGN stat_val ATK ASSIGN stat_val DEF ASSIGN stat_val (MP ASSIGN stat_val)? (MP_REGEN ASSIGN stat_val)? SEMICOLON
+turn_stmt: TURN IDENTIFIER USE IDENTIFIER ON IDENTIFIER SEMICOLON
 repeat_stmt: REPEAT NUMBER TIMES_KW LBRACE statement* RBRACE
 if_stmt: IF condition THEN LBRACE statement* RBRACE (ELSE LBRACE statement* RBRACE)? END
 while_stmt: WHILE condition DO LBRACE statement* RBRACE END

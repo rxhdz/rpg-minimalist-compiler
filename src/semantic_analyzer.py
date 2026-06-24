@@ -27,7 +27,7 @@ from .ast_nodes import (
 from .symbol_table import SymbolEntry, SymbolTable
 
 RESERVED_WORDS = {
-    "character", "hp", "atk", "def", "turn", "use", "attack", "on",
+    "character", "hp", "mp", "mp_regen", "atk", "def", "turn", "use", "on",
     "repeat", "times", "if", "then", "else", "end",
     "while", "do", "number", "print",
 }
