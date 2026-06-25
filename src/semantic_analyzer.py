@@ -338,42 +338,137 @@ class SemanticAnalyzer:
             )
             return
 
-        # D3: verificar HP estático del atacante
-        attacker_hp = attacker.static_hp
-        if attacker_hp is not None and attacker_hp <= 0:
-            key = (node.line, node.column)
-            if key not in self._dead_reported:
-                self._error(
-                    f"no se puede atacar con '{node.attacker}': "
-                    f"ya está derrotado (HP = {int(attacker_hp)}).",
-                    node.line, node.column,
-                )
-                self._dead_reported.add(key)
+        # D2: validar que la skill existe
+        skill_name = node.skill
+        if skill_name not in SKILLS:
+            self._error(
+                f"'{skill_name}' no es una habilidad valida.",
+                node.line, node.column,
+            )
+            return
+        skill = SKILLS[skill_name]
+
+        # D2: si la skill tiene costo, el atacante debe tener mana
+        if skill["cost"] > 0 and (attacker.max_mp is None or attacker.max_mp <= 0):
+            self._error(
+                f"'{node.attacker}' no tiene mana para usar "
+                f"'{skill_name}' (cuesta {skill['cost']}).",
+                node.line, node.column,
+            )
             return
 
-        # D3: verificar HP estático de la víctima
-        victim_hp = victim.static_hp
-        if victim_hp is not None and victim_hp <= 0:
-            key = (node.line, node.column)
-            if key not in self._dead_reported:
+        # D3: solo simular si ambos son personajes
+        if attacker.type == "character" and victim.type == "character":
+
+            # 1. MP regen del atacante
+            if attacker.max_mp is not None:
+                attacker.static_mp = min(
+                    attacker.max_mp,
+                    attacker.static_mp + attacker.mp_regen,
+                )
+
+            # 2. Tick de efectos en atacante y víctima
+            self._tick_effects(attacker)
+            self._tick_effects(victim)
+
+            # 3. Verificar HP del atacante
+            if attacker.static_hp is not None and attacker.static_hp <= 0:
                 self._error(
-                    f"no se puede atacar a '{node.victim}': "
-                    f"ya está derrotado (HP = {int(victim_hp)}).",
+                    f"no se puede atacar con '{node.attacker}': "
+                    f"ya está derrotado.",
                     node.line, node.column,
                 )
-                self._dead_reported.add(key)
-            return  # No actualizar HP si ya estaba muerto
+                return
 
-        # Calcular daño y actualizar HP estático (puede ser negativo)
-        if (
-            attacker and attacker.type == "character"
-            and victim and victim.type == "character"
-        ):
-            attacker_atk = attacker.atk["value"]
-            victim_def = victim.defense["value"]
-            damage = max(0, attacker_atk - victim_def)
-            actual_hp = victim.static_hp - damage
-            self.symbol_table.update_static_hp(node.victim, actual_hp)
+            # 4. Verificar HP de la víctima
+            if victim.static_hp is not None and victim.static_hp <= 0:
+                self._error(
+                    f"no se puede atacar a '{node.victim}': "
+                    f"ya está derrotado.",
+                    node.line, node.column,
+                )
+                return
+
+            # 5. Verificar MP suficiente
+            if skill["cost"] > 0 and attacker.static_mp is not None:
+                if attacker.static_mp < skill["cost"]:
+                    self._error(
+                        f"'{node.attacker}' no tiene suficiente mana "
+                        f"(tiene {attacker.static_mp}, "
+                        f"necesita {skill['cost']}).",
+                        node.line, node.column,
+                    )
+                    return
+
+            # --- Ejecutar skill ---
+
+            # Descontar costo de mana
+            if skill["cost"] > 0 and attacker.static_mp is not None:
+                attacker.static_mp -= skill["cost"]
+
+            # Recuperar mana porcentual (meditate)
+            recovery_mult = skill.get("mp_recovery_mult", 0)
+            if recovery_mult > 0 and attacker.max_mp is not None:
+                recovery = round(attacker.max_mp * recovery_mult)
+                attacker.static_mp = min(
+                    attacker.max_mp,
+                    attacker.static_mp + recovery,
+                )
+
+            # Calcular daño o curación
+            if skill["damage"] < 0:
+                # Curación: no revive, no supera HP original
+                if victim.static_hp is not None and victim.static_hp > 0:
+                    heal_amount = -skill["damage"]
+                    new_hp = min(
+                        victim.static_hp + heal_amount,
+                        victim.hp["value"],
+                    )
+                else:
+                    new_hp = victim.static_hp
+            else:
+                # Defensa afectada por efectos
+                effective_def = victim.defense["value"]
+                if "defense_up" in victim.status_effects:
+                    effective_def *= victim.status_effects["defense_up"]["multiplier"]
+                damage = max(0, attacker.atk["value"] + skill["damage"] - effective_def)
+                new_hp = victim.static_hp - damage if victim.static_hp is not None else 0
+
+            if new_hp is not None:
+                new_hp = max(0, new_hp)
+                self.symbol_table.update_static_hp(node.victim, new_hp)
+
+            # Aplicar efecto de la skill
+            if skill["effect"]:
+                eff = skill["effect"]
+                target = victim.status_effects
+                if eff["type"] == "poison":
+                    if "poison" not in target:
+                        target["poison"] = {
+                            "dmg_per_turn": eff["dmg_per_turn"],
+                            "remaining": 0,
+                        }
+                    target["poison"]["remaining"] += eff["turns"]
+                elif eff["type"] == "defense_up":
+                    if "defense_up" not in target:
+                        target["defense_up"] = {
+                            "multiplier": eff["multiplier"],
+                            "remaining": 0,
+                        }
+                    target["defense_up"]["remaining"] += eff["turns"]
+
+    def _tick_effects(self, entry: SymbolEntry):
+        """Aplica daño de efectos activos y reduce contadores (D3)."""
+        for eff_name in list(entry.status_effects.keys()):
+            eff = entry.status_effects[eff_name]
+            if eff_name == "poison":
+                if entry.static_hp is not None:
+                    entry.static_hp -= eff["dmg_per_turn"]
+                    if entry.static_hp < 0:
+                        entry.static_hp = 0
+            eff["remaining"] -= 1
+            if eff["remaining"] <= 0:
+                del entry.status_effects[eff_name]
 
     # ------------------------------------------------------------------
     # Repeat: simular N iteraciones (D3)
