@@ -1,0 +1,31 @@
+// Prueba de habilidades con mana y efectos de estado
+character hero hp=100 atk=25 def=10 mp=50;
+character mage hp=80 atk=15 def=5 mp=40 mp_regen=2;
+character boss hp=200 atk=20 def=8 mp=20;
+
+// Habilidad con costo de mana
+turn mage use fireball on boss;
+
+// Recuperacion de mana
+turn mage use meditate on mage;
+
+// Heroe recibe danio del boss
+turn boss use attack on hero;
+
+// Curacion sobre heroe daniado
+turn mage use heal on hero;
+
+// Veneno con acumulacion
+turn hero use poison_strike on boss;
+turn hero use poison_strike on boss;
+
+// Defensa aumentada sobre el boss (reduce siguiente ataque)
+turn boss use shield_bash on boss;
+
+// Turno basico con attack contra boss con defensa aumentada
+turn hero use attack on boss;
+
+// Goblin ataca con veneno activo en boss
+turn hero use attack on boss;
+
+print "Combate finalizado";
