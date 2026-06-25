@@ -32,6 +32,18 @@ RESERVED_WORDS = {
     "while", "do", "number", "print",
 }
 
+SKILLS = {
+    "attack":        {"cost": 0,  "damage": 0,     "mp_recovery_mult": 0, "effect": None},
+    "fireball":      {"cost": 15, "damage": 40,    "mp_recovery_mult": 0, "effect": None},
+    "ice_spike":     {"cost": 10, "damage": 25,    "mp_recovery_mult": 0, "effect": None},
+    "heal":          {"cost": 20, "damage": -30,   "mp_recovery_mult": 0, "effect": None},
+    "meditate":      {"cost": 0,  "damage": 0,     "mp_recovery_mult": 0.5, "effect": None},
+    "poison_strike": {"cost": 12, "damage": 15,    "mp_recovery_mult": 0,
+                      "effect": {"type": "poison",     "dmg_per_turn": 5, "turns": 3}},
+    "shield_bash":   {"cost": 8,  "damage": 10,    "mp_recovery_mult": 0,
+                      "effect": {"type": "defense_up", "multiplier": 2,  "turns": 2}},
+}
+
 
 class SemanticAnalyzer:
     """Analiza semánticamente un AST del DSL TurnGame."""
@@ -242,6 +254,34 @@ class SemanticAnalyzer:
                 node.line, node.column,
             )
 
+        # D1: mp entero no negativo (si está presente)
+        if node.mp is not None:
+            if isinstance(node.mp, float):
+                self._error(
+                    f"'mp' de '{node.name}' debe ser un número entero, no {node.mp}.",
+                    node.line, node.column,
+                )
+            elif node.mp < 0:
+                self._error(
+                    f"'mp' de '{node.name}' es negativo ({node.mp}). Debe ser >= 0.",
+                    node.line, node.column,
+                )
+
+        # D1: mp_regen entero no negativo (si está presente)
+        if node.mp_regen is not None:
+            if isinstance(node.mp_regen, float):
+                self._error(
+                    f"'mp_regen' de '{node.name}' debe ser un número entero, "
+                    f"no {node.mp_regen}.",
+                    node.line, node.column,
+                )
+            elif node.mp_regen < 0:
+                self._error(
+                    f"'mp_regen' de '{node.name}' es negativo ({node.mp_regen}). "
+                    f"Debe ser >= 0.",
+                    node.line, node.column,
+                )
+
         entry = SymbolEntry(
             node.name, "character", line=node.line, column=node.column
         )
@@ -249,6 +289,12 @@ class SemanticAnalyzer:
         entry.atk = {"value": node.atk, "addr": None}
         entry.defense = {"value": node.defense, "addr": None}
         entry.static_hp = node.hp
+        entry.max_mp = node.mp
+        entry.static_mp = node.mp
+        entry.mp_regen = (
+            node.mp_regen if node.mp_regen is not None
+            else (round(node.mp * 0.1) if node.mp is not None else 0)
+        )
         entry.initialized = True
 
         if not self.symbol_table.declare(entry):
