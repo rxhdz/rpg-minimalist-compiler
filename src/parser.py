@@ -45,7 +45,8 @@ class ASTTransformer(lark.Transformer):
 
     # -- Declaracion de personaje -------------------------------------------
     # stat_val: MINUS? NUMBER
-    # character_decl: CHARACTER IDENTIFIER HP ASSIGN stat_val ATK ASSIGN stat_val DEF ASSIGN stat_val SEMICOLON
+    # character_decl: CHARACTER IDENTIFIER HP ASSIGN stat_val ATK ASSIGN stat_val
+    #                 DEF ASSIGN stat_val (MP ASSIGN stat_val)? (MP_REGEN ASSIGN stat_val)? SEMICOLON
 
     def stat_val(self, children):
         if len(children) == 1:
@@ -65,16 +66,25 @@ class ASTTransformer(lark.Transformer):
         hp = children[4]
         atk = children[7]
         defense = children[10]
-        return CharacterDecl(name, hp, atk, defense, meta.line, meta.column)
+        mp = None
+        mp_regen = None
+        for i, child in enumerate(children):
+            if isinstance(child, Token):
+                if child.type == "MP":
+                    mp = children[i + 2]
+                elif child.type == "MP_REGEN":
+                    mp_regen = children[i + 2]
+        return CharacterDecl(name, hp, mp, mp_regen, atk, defense, meta.line, meta.column)
 
     # -- Turno de combate ---------------------------------------------------
-    # turn_stmt: TURN IDENTIFIER USE ATTACK ON IDENTIFIER SEMICOLON
+    # turn_stmt: TURN IDENTIFIER USE IDENTIFIER ON IDENTIFIER SEMICOLON
 
     @v_args(meta=True)
     def turn_stmt(self, children, meta):
         attacker = str(children[1])
+        skill = str(children[3])
         victim = str(children[5])
-        return Turn(attacker, victim, meta.line, meta.column)
+        return Turn(attacker, skill, victim, meta.line, meta.column)
 
     # -- Repeticion fija ----------------------------------------------------
     # repeat_stmt: REPEAT NUMBER TIMES LBRACE statement* RBRACE

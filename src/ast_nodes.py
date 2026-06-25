@@ -22,14 +22,20 @@ class Program(ASTNode):
 class CharacterDecl(ASTNode):
     name: str
     hp: int | float
+    mp: int | None
+    mp_regen: int | None
     atk: int | float
     defense: int | float
 
-    def __init__(self, name: str, hp: int | float, atk: int | float, defense: int | float,
+    def __init__(self, name: str, hp: int | float,
+                 mp: int | None, mp_regen: int | None,
+                 atk: int | float, defense: int | float,
                  line: int = 0, column: int = 0):
         super().__init__(line, column)
         self.name = name
         self.hp = hp
+        self.mp = mp
+        self.mp_regen = mp_regen
         self.atk = atk
         self.defense = defense
 
@@ -37,12 +43,14 @@ class CharacterDecl(ASTNode):
 
 class Turn(ASTNode):
     attacker: str
+    skill: str
     victim: str
 
-    def __init__(self, attacker: str, victim: str,
+    def __init__(self, attacker: str, skill: str, victim: str,
                  line: int = 0, column: int = 0):
         super().__init__(line, column)
         self.attacker = attacker
+        self.skill = skill
         self.victim = victim
 
 
@@ -192,13 +200,19 @@ def show_ast(node: ASTNode, indent: str = "") -> str:
         for n in node.nodes:
             parts.append(show_ast(n, indent + "|  "))
     elif isinstance(node, CharacterDecl):
+        extra = ""
+        if node.mp is not None:
+            extra += f", mp={node.mp}"
+        if node.mp_regen is not None:
+            extra += f", mp_regen={node.mp_regen}"
         parts.append(
             f"{prefix}CharacterDecl(name={node.name}, "
-            f"hp={node.hp}, atk={node.atk}, def={node.defense})"
+            f"hp={node.hp}, atk={node.atk}, def={node.defense}{extra})"
         )
     elif isinstance(node, Turn):
         parts.append(
-            f"{prefix}Turn(attacker={node.attacker}, victim={node.victim})"
+            f"{prefix}Turn(attacker={node.attacker}, "
+            f"skill={node.skill}, victim={node.victim})"
         )
     elif isinstance(node, Repeat):
         parts.append(f"{prefix}Repeat(times={node.times})")
