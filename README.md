@@ -16,7 +16,7 @@ pip install -r requirements.txt
 Analizar un archivo `.tg`:
 
 ```
-python main.py tests/prueba_valida.tg
+python main.py tests/valid_test.tg
 ```
 
 El programa analiza el archivo en tres fases:
@@ -30,7 +30,7 @@ El programa analiza el archivo en tres fases:
 
 Ejemplo:
 ```
-python main.py --no-ast tests/prueba_valida.tg
+python main.py --no-ast tests/valid_test.tg
 ```
 
 ### Modo REPL (entrada por linea de comandos)
@@ -46,9 +46,12 @@ sintactico (sin validacion semantica). Escribe `salir` para terminar.
 
 | Archivo | Descripcion |
 |---|---|
-| `tests/prueba_valida.tg` | Programa correcto en las tres fases |
-| `tests/prueba_error_sintactico.tg` | Programa con error sintactico (falta `;`) |
-| `tests/prueba_error_semantico.tg` | Programa con errores semanticos (D3 y D4) |
+| `tests/valid_test.tg` | Programa correcto en las tres fases |
+| `tests/test_sintatic_error.tg` | Programa con error sintactico (falta `;`) |
+| `tests/test_semantic_error.tg` | Programa con errores semanticos (D3 y D4) |
+| `tests/test_multi_errors.tg` | Programa con multiples errores sintacticos |
+| `tests/test_comments.tg` | Programa con comentarios de linea y bloque |
+| `tests/test_skill_effects.tg` | Programa con skills, mana y efectos de estado |
 
 ## Estructura del proyecto
 
@@ -61,23 +64,27 @@ sintactico (sin validacion semantica). Escribe `salir` para terminar.
 │   ├── symbol_table.py       # Tabla de simbolos con ambitos anidados
 │   └── semantic_analyzer.py  # Analisis semantico y reglas del dominio
 ├── tests/
-│   ├── prueba_valida.tg
-│   ├── prueba_error_sintactico.tg
-│   └── prueba_error_semantico.tg
+│   ├── valid_test.tg
+│   ├── test_sintatic_error.tg
+│   ├── test_semantic_error.tg
+│   ├── test_multi_errors.tg
+│   ├── test_comments.tg
+│   └── test_skill_effects.tg
 ├── requirements.txt
 └── BLUEPRINT.md              # Documentacion de arquitectura
 ```
 
 ## DSL TurnGame
 
-Lenguaje para definir combates por turnos. Los personajes tienen HP, ataque
-y defensa. El programa declara personajes y ejecuta turnos de combate.
+Lenguaje para definir combates por turnos. Los personajes tienen HP, mana (MP),
+ataque y defensa. El programa declara personajes, ejecuta turnos de combate
+usando habilidades con costos de mana y efectos de estado.
 
 ### Palabras reservadas
 
 ```
-character  hp  atk  def
-turn  use  attack  on
+character  hp  mp  mp_regen  atk  def
+turn  use  on
 repeat  times
 if  then  else  end
 while  do
@@ -93,29 +100,58 @@ number  print
 ### Declaracion de personaje
 
 ```
-character <nombre> hp=<valor> atk=<valor> def=<valor>;
+character <nombre> hp=<valor> atk=<valor> def=<valor> [mp=<valor>] [mp_regen=<valor>];
 ```
 
-Ejemplo:
+Ejemplos:
 ```
 character hero hp=100 atk=25 def=10;
+character mage hp=80 atk=15 def=5 mp=40 mp_regen=5;
 ```
+
+- `mp` (opcional): puntos de mana del personaje. Si se omite, el personaje no
+  tiene mana y no puede usar habilidades con costo.
+- `mp_regen` (opcional): mana recuperado por turno. Si se omite pero se define
+  `mp`, el valor por defecto es el 10% del mana base (redondeado).
 
 ### Turno de combate
 
 ```
-turn <atacante> use attack on <victima>;
+turn <atacante> use <habilidad> on <victima>;
 ```
 
-Ejemplo:
+Ejemplos:
 ```
 turn hero use attack on goblin;
+turn mage use fireball on goblin;
 ```
 
 Mecanica de combate:
-- El atacante causa `max(0, atk - def)` de daño a la victima
-- El HP de la victima se reduce en esa cantidad
-- Si el HP de un personaje llega a 0 o menos, no puede atacar ni ser atacado
+- El daño base es `max(0, atk - def)`. Algunas habilidades añaden daño extra.
+- Si la habilidad tiene costo de mana, se descuenta del mana del atacante.
+- Si el atacante no tiene mana suficiente, el turno falla (error semantico).
+- Antes de cada turno, el atacante recupera mana pasivo (`mp_regen`).
+- El HP de un personaje no puede bajar de 0 ni superar su valor original.
+- Si el HP llega a 0, el personaje no puede atacar ni ser atacado.
+- La curacion no revive personajes con HP = 0.
+
+### Habilidades disponibles
+
+| Habilidad | Costo MP | Daño | Efecto |
+|---|---|---|---|
+| `attack` | 0 | 0 (solo atk - def) | — |
+| `fireball` | 15 | 40 | — |
+| `ice_spike` | 10 | 25 | — |
+| `heal` | 20 | -30 (curacion) | — |
+| `meditate` | 0 | 0 | Recupera 50% del mana maximo |
+| `poison_strike` | 12 | 15 | Veneno: 5 de daño por turno, 3 turnos |
+| `shield_bash` | 8 | 10 | Defensa duplicada por 2 turnos |
+
+Notas:
+- `attack` no requiere mana y causa solo `atk - def` (comportamiento original).
+- Los efectos de estado se apilan: aplicar veneno nuevamente suma turnos.
+- Los efectos se reducen al inicio de cada turno (tick).
+- `defense_up` duplica la defensa del objetivo durante su duracion.
 
 ### Asignacion
 
@@ -129,12 +165,14 @@ Ejemplos:
 number danio_extra = 10;
 hero.atk = hero.atk + danio_extra;
 goblin.hp = goblin.hp - 5;
+hero.mp = hero.mp + 10;
 ```
 
 ### Lectura de atributos
 
 ```
 <personaje>.hp
+<personaje>.mp
 <personaje>.atk
 <personaje>.def
 ```
@@ -194,34 +232,24 @@ Deben ser enteros no negativos. La inicializacion es opcional.
 ### Ejemplo completo
 
 ```
-character hero hp=100 atk=25 def=10;
-character goblin hp=40 atk=8 def=2;
-character boss hp=200 atk=15 def=5;
+character hero hp=100 atk=25 def=10 mp=50;
+character mage hp=80 atk=15 def=5 mp=40;
+character goblin hp=60 atk=8 def=2;
+character boss hp=150 atk=20 def=8;
 
-turn hero use attack on goblin;
-turn goblin use attack on hero;
+turn mage use fireball on goblin;
+turn mage use meditate on mage;
 
-number danio_extra = 10;
-hero.atk = hero.atk + danio_extra;
+turn boss use attack on hero;
+turn mage use heal on hero;
 
-if goblin.hp > 0 then {
-    turn hero use attack on goblin;
-} else {
-    print "Goblin derrotado";
-} end
+turn hero use poison_strike on boss;
+turn hero use poison_strike on boss;
 
-repeat 2 times {
-    turn hero use attack on boss;
-}
-
-while hero.hp > 0 do {
-    number ronda = 1;
-    turn hero use attack on boss;
-    ronda = ronda + 1;
-} end
+turn hero use attack on boss;
+turn goblin use attack on boss;
 
 print "Combate finalizado";
-print hero.hp;
 ```
 
 ## Reglas semanticas
@@ -239,7 +267,7 @@ print hero.hp;
 
 | Regla | Descripcion |
 |---|---|
-| D1 | HP, ATK y DEF de personaje deben ser >= 0 |
-| D2 | Atacante y victima deben estar declarados como personaje |
-| D3 | No se puede atacar con un personaje con HP <= 0, ni a un personaje con HP <= 0 |
+| D1 | HP, MP, MP_REGEN, ATK y DEF de personaje deben ser enteros >= 0 |
+| D2 | Atacante y victima deben estar declarados como personaje; la habilidad debe existir; si tiene costo, el atacante debe tener mana |
+| D3 | No se puede atacar con un personaje con HP <= 0, ni a un personaje con HP <= 0; se simula regeneracion de mana, tick de efectos y consumo de recursos |
 | D4 | Las variables de tipo `number` deben ser enteras no negativas |
