@@ -685,6 +685,8 @@ class SemanticAnalyzer:
                         entry.atk["value"] = val
                     elif attr == "def":
                         entry.defense["value"] = val
+                    elif attr == "mp":
+                        entry.max_mp = val
 
     # ------------------------------------------------------------------
     # G4: Print

@@ -96,6 +96,6 @@ primary: NUMBER
         | attr_access
         | LPAREN expression RPAREN
 
-attr_access: IDENTIFIER DOT (HP | ATK | DEF)
+attr_access: IDENTIFIER DOT (HP | MP | ATK | DEF)
 
 relop: LT | GT | LTE | GTE | EQ | NEQ
