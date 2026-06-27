@@ -362,10 +362,11 @@ class SemanticAnalyzer:
 
             # 1. MP regen del atacante
             if attacker.max_mp is not None:
-                attacker.static_mp = min(
+                new_mp = min(
                     attacker.max_mp,
                     attacker.static_mp + attacker.mp_regen,
                 )
+                self.symbol_table.update_static_mp(node.attacker, new_mp)
 
             # 2. Tick de efectos en atacante y víctima
             self._tick_effects(attacker)
@@ -404,16 +405,19 @@ class SemanticAnalyzer:
 
             # Descontar costo de mana
             if skill["cost"] > 0 and attacker.static_mp is not None:
-                attacker.static_mp -= skill["cost"]
+                self.symbol_table.update_static_mp(
+                    node.attacker, attacker.static_mp - skill["cost"]
+                )
 
             # Recuperar mana porcentual (meditate)
             recovery_mult = skill.get("mp_recovery_mult", 0)
             if recovery_mult > 0 and attacker.max_mp is not None:
                 recovery = round(attacker.max_mp * recovery_mult)
-                attacker.static_mp = min(
+                new_mp = min(
                     attacker.max_mp,
                     attacker.static_mp + recovery,
                 )
+                self.symbol_table.update_static_mp(node.attacker, new_mp)
 
             # Calcular daño o curación
             if skill["damage"] < 0:
