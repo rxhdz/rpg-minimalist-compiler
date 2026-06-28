@@ -376,7 +376,8 @@ class SemanticAnalyzer:
             if attacker.static_hp is not None and attacker.static_hp <= 0:
                 self._error(
                     f"no se puede atacar con '{node.attacker}': "
-                    f"ya está derrotado.",
+                    f"ya está derrotado "
+                    f"(HP = {int(attacker.static_hp)}).",
                     node.line, node.column,
                 )
                 return
@@ -385,7 +386,8 @@ class SemanticAnalyzer:
             if victim.static_hp is not None and victim.static_hp <= 0:
                 self._error(
                     f"no se puede atacar a '{node.victim}': "
-                    f"ya está derrotado.",
+                    f"ya está derrotado "
+                    f"(HP = {int(victim.static_hp)}).",
                     node.line, node.column,
                 )
                 return
@@ -439,7 +441,6 @@ class SemanticAnalyzer:
                 new_hp = victim.static_hp - damage if victim.static_hp is not None else 0
 
             if new_hp is not None:
-                new_hp = max(0, new_hp)
                 self.symbol_table.update_static_hp(node.victim, new_hp)
 
             # Aplicar efecto de la skill
@@ -468,8 +469,6 @@ class SemanticAnalyzer:
             if eff_name == "poison":
                 if entry.static_hp is not None:
                     entry.static_hp -= eff["dmg_per_turn"]
-                    if entry.static_hp < 0:
-                        entry.static_hp = 0
             eff["remaining"] -= 1
             if eff["remaining"] <= 0:
                 del entry.status_effects[eff_name]
