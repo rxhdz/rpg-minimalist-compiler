@@ -71,7 +71,6 @@ sintactico (sin validacion semantica). Escribe `salir` para terminar.
 │   ├── test_comments.tg
 │   └── test_skill_effects.tg
 ├── requirements.txt
-└── BLUEPRINT.md              # Documentacion de arquitectura
 ```
 
 ## DSL TurnGame
